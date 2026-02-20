@@ -1,0 +1,4 @@
+turso database url: libsql://rasma-rasma.aws-ap-northeast-1.turso.io
+Token:
+eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzE1NDM1OTUsImlkIjoiNzgxOGY0NTAtOWJhNi00Yzk2LTkzYjQtZTNiZjJlNjgyMTk0IiwicmlkIjoiNTQwZDI4MjQtMjRkZC00YmE2LWE4ZGQtYjcwNjVhMjBlMGU3In0.lQZyljIrEhxlkVT7ofEL1sYCyOLIqLGQ_hGr6AF5M2aVxjcSFPY25v92TgEHmcKvk-kMJmeTS16B2JPFGh9hAQ
+libsql://rasma-rasma.aws-ap-northeast-1.turso.io
