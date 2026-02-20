@@ -194,6 +194,7 @@ export const UI = {
     { label: "Diseño gráfico", category: "marketing" },
     { label: "Licencia software", category: "software" },
     { label: "Hosting / dominio", category: "software" },
+    { label: "Evaluación Ados-2", category: "personal" },
     { label: "Pago sesión sin contrato", category: "personal" },
     { label: "Honorarios profesional", category: "personal" },
   ] as { label: string; category: string }[],
