@@ -199,27 +199,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
 
-    async jwt({ token, user, account }) {
+    jwt({ token, user, account }) {
       if (user) {
         token.role = user.role;
         token.id = user.id;
         token.linkedPatientId = user.linkedPatientId;
-      }
-      // Refresh role from DB on every token refresh so admin changes take effect
-      if (token.id) {
-        try {
-          const dbUser = await db.query.users.findFirst({
-            where: eq(users.id, token.id as string),
-            columns: { role: true, linkedPatientId: true, active: true },
-          });
-          if (dbUser) {
-            token.role = dbUser.role;
-            token.linkedPatientId = dbUser.linkedPatientId;
-            if (!dbUser.active) return null as unknown as typeof token;
-          }
-        } catch {
-          // Silent fail — use cached token values
-        }
       }
       // Pass Google access token through to session if needed
       if (account?.provider === "google" && account.access_token) {
