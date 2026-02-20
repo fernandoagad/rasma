@@ -140,6 +140,25 @@ export async function updateApplicantStatus(id: string, status: string) {
     details: { oldStatus, newStatus: status },
   });
 
+  // Auto-send rejection email for intern applicants
+  if (status === "rechazado") {
+    const fullApplicant = await db.query.applicants.findFirst({
+      where: eq(applicants.id, id),
+      columns: { email: true, name: true, positions: true },
+    });
+    if (fullApplicant) {
+      try {
+        const positions: string[] = JSON.parse(fullApplicant.positions || "[]");
+        if (positions.includes("Pasantía Universitaria")) {
+          const { sendInternRejectedEmail } = await import("@/lib/email");
+          await sendInternRejectedEmail(fullApplicant.email, fullApplicant.name);
+        }
+      } catch (err) {
+        console.error("Failed to send intern rejection email:", err);
+      }
+    }
+  }
+
   revalidatePath(`/rrhh/postulantes/${id}`);
   revalidatePath("/rrhh/postulantes");
   return { success: true };

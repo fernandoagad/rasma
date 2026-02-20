@@ -11,6 +11,7 @@ import {
   sendPaymentStatusUpdate,
   sendTreatmentPlanCreated,
   sendTreatmentPlanStatusUpdate,
+  sendPayoutProcessed,
   type AppointmentEmailData,
   type PaymentEmailData,
   type TreatmentPlanEmailData,
@@ -30,6 +31,7 @@ const DEFAULTS: Record<string, string> = {
   notify_payment_received: "true",
   notify_payment_status: "true",
   notify_treatment_plan: "true",
+  notify_payout_processed: "true",
 };
 
 export async function getSetting(key: string): Promise<string> {
@@ -306,6 +308,50 @@ export async function notifyTreatmentPlanStatusChanged(
     await sendTreatmentPlanStatusUpdate(patient.email, patientName, newStatus);
   } catch (e) {
     console.error("Failed to notify treatment plan status change:", e);
+  }
+}
+
+// ============================================================
+// Payout notifications
+// ============================================================
+
+export async function notifyPayoutProcessed(
+  therapistId: string,
+  payoutData: {
+    periodStart: string;
+    periodEnd: string;
+    grossAmount: number;
+    commissionAmount: number;
+    deductionAmount: number;
+    netAmount: number;
+    bankTransferRef?: string | null;
+  }
+): Promise<void> {
+  try {
+    if (!(await isNotificationsEnabled())) return;
+    if ((await getSetting("notify_payout_processed")) !== "true") return;
+
+    const therapist = await db.query.users.findFirst({
+      where: (u, { eq: e }) => e(u.id, therapistId),
+      columns: { id: true, name: true, email: true },
+    });
+    if (!therapist?.email) return;
+
+    const fmtDate = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("es-CL");
+    const fmtMoney = (cents: number) => `$${(cents / 100).toLocaleString("es-CL")}`;
+
+    await sendPayoutProcessed(therapist.email, {
+      therapistName: therapist.name,
+      periodStart: fmtDate(payoutData.periodStart),
+      periodEnd: fmtDate(payoutData.periodEnd),
+      grossAmount: fmtMoney(payoutData.grossAmount),
+      commissionAmount: fmtMoney(payoutData.commissionAmount),
+      deductionAmount: fmtMoney(payoutData.deductionAmount),
+      netAmount: fmtMoney(payoutData.netAmount),
+      bankTransferRef: payoutData.bankTransferRef,
+    });
+  } catch (e) {
+    console.error("Failed to notify payout processed:", e);
   }
 }
 

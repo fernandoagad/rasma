@@ -17,7 +17,7 @@ export default async function StaffMemberPage({
 
   return (
     <div className="max-w-6xl mx-auto">
-      <StaffMemberDetail member={member} />
+      <StaffMemberDetail member={member} userRole={session.user.role} />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { createExpense } from "@/actions/expenses";
+import { createExpense, updateExpense } from "@/actions/expenses";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UI } from "@/constants/ui";
@@ -20,6 +20,7 @@ import {
   FileText,
   X,
   Sparkles,
+  ExternalLink,
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -49,15 +50,34 @@ function getFirstOfMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
-export function ExpenseForm() {
-  const [state, action, pending] = useActionState(createExpense, undefined);
+interface ExpenseData {
+  id: string;
+  description: string;
+  amount: number; // in cents
+  category: string;
+  date: string;
+  notes: string | null;
+  receiptFileName: string | null;
+  receiptViewLink: string | null;
+}
+
+export function ExpenseForm({ expense }: { expense?: ExpenseData }) {
+  const isEdit = !!expense;
+  const [state, action, pending] = useActionState(
+    isEdit ? updateExpense : createExpense,
+    undefined
+  );
   const router = useRouter();
 
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(getToday);
+  const [description, setDescription] = useState(expense?.description || "");
+  const [category, setCategory] = useState(expense?.category || "");
+  const [amount, setAmount] = useState(
+    expense ? String(expense.amount / 100) : ""
+  );
+  const [date, setDate] = useState(expense?.date || getToday);
+  const [notes, setNotes] = useState(expense?.notes || "");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [removeReceipt, setRemoveReceipt] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -80,7 +100,6 @@ export function ExpenseForm() {
     setDescription(preset.label);
     setCategory(preset.category);
     setShowSuggestions(false);
-    // Focus amount field after applying preset
     setTimeout(() => {
       document.querySelector<HTMLInputElement>('input[name="amount"]')?.focus();
     }, 50);
@@ -89,6 +108,7 @@ export function ExpenseForm() {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] || null;
     setReceiptFile(file);
+    if (file) setRemoveReceipt(false);
   }
 
   function clearFile() {
@@ -96,8 +116,17 @@ export function ExpenseForm() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
+  const hasExistingReceipt =
+    isEdit && expense?.receiptFileName && !removeReceipt;
+
   return (
     <form action={action} className="space-y-5">
+      {/* Hidden id for edit mode */}
+      {isEdit && <input type="hidden" name="id" value={expense.id} />}
+      {removeReceipt && (
+        <input type="hidden" name="removeReceipt" value="true" />
+      )}
+
       {/* Quick Presets */}
       <div>
         <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -310,6 +339,49 @@ export function ExpenseForm() {
               onChange={handleFileChange}
               className="hidden"
             />
+
+            {/* Show existing receipt in edit mode */}
+            {hasExistingReceipt && !receiptFile && (
+              <div className="flex items-center gap-3 border rounded-lg p-3 bg-blue-50 border-blue-200">
+                <FileText className="h-5 w-5 text-blue-600 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">
+                    {expense.receiptFileName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Comprobante existente
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {expense.receiptViewLink && (
+                    <a
+                      href={expense.receiptViewLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 rounded-md hover:bg-muted/50 text-blue-600"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-2 py-1 text-xs font-medium rounded-md bg-white border hover:bg-muted/50"
+                  >
+                    Reemplazar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRemoveReceipt(true)}
+                    className="p-1 rounded-md hover:bg-red-50 text-red-500"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* New file selected */}
             {receiptFile ? (
               <div className="flex items-center gap-3 border rounded-lg p-3 bg-rasma-teal/5 border-rasma-teal/20">
                 <FileText className="h-5 w-5 text-rasma-teal shrink-0" />
@@ -330,17 +402,19 @@ export function ExpenseForm() {
                 </button>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full border-2 border-dashed rounded-lg p-6 flex flex-col items-center gap-2 text-muted-foreground hover:border-rasma-teal/40 hover:bg-rasma-teal/5 transition-colors"
-              >
-                <Upload className="h-6 w-6" />
-                <span className="text-sm font-medium">
-                  Subir comprobante
-                </span>
-                <span className="text-xs">JPG, PNG, WebP o PDF. Máx 10 MB</span>
-              </button>
+              !hasExistingReceipt && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-2 border-dashed rounded-lg p-6 flex flex-col items-center gap-2 text-muted-foreground hover:border-rasma-teal/40 hover:bg-rasma-teal/5 transition-colors"
+                >
+                  <Upload className="h-6 w-6" />
+                  <span className="text-sm font-medium">
+                    Subir comprobante
+                  </span>
+                  <span className="text-xs">JPG, PNG, WebP o PDF. Máx 10 MB</span>
+                </button>
+              )
             )}
           </div>
 
@@ -350,6 +424,8 @@ export function ExpenseForm() {
             <textarea
               name="notes"
               rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
               placeholder="Notas adicionales..."
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rasma-teal/30"
             />
@@ -369,7 +445,13 @@ export function ExpenseForm() {
         disabled={pending || !description || !category || !amount || !date}
         className="w-full bg-rasma-dark text-rasma-lime py-3 rounded-xl font-medium hover:opacity-90 transition disabled:opacity-40 text-sm"
       >
-        {pending ? "Registrando..." : "Registrar Gasto"}
+        {pending
+          ? isEdit
+            ? "Guardando..."
+            : "Registrando..."
+          : isEdit
+            ? "Guardar Cambios"
+            : "Registrar Gasto"}
       </button>
     </form>
   );

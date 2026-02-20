@@ -215,6 +215,7 @@ export async function createPatient(
       notes: data.notes || null,
       primaryTherapistId: data.primaryTherapistId || null,
       status: data.status,
+      type: data.type || "fundacion",
     })
     .returning({ id: patients.id });
 
@@ -266,6 +267,7 @@ export async function updatePatient(
       notes: data.notes || null,
       primaryTherapistId: data.primaryTherapistId || null,
       status: data.status,
+      type: data.type || "fundacion",
       updatedAt: new Date(),
     })
     .where(eq(patients.id, id));

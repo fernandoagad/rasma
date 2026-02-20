@@ -50,6 +50,41 @@
       "when": 1771599494852,
       "tag": "0006_busy_silvermane",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1771604653603,
+      "tag": "0007_sad_marvel_zombies",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1771608213670,
+      "tag": "0008_noisy_hellfire_club",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1771610674385,
+      "tag": "0009_parallel_edwin_jarvis",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1771615614856,
+      "tag": "0010_far_ultimates",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1771617828136,
+      "tag": "0011_awesome_cardiac",
+      "breakpoints": true
     }
   ]
 }

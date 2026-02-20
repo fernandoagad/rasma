@@ -18,6 +18,7 @@ export const patientFormSchema = z.object({
   notes: z.string().max(5000).optional().or(z.literal("")),
   primaryTherapistId: z.string().optional().or(z.literal("")),
   status: z.enum(["activo", "inactivo", "alta"]).default("activo"),
+  type: z.enum(["fundacion", "externo"]).default("fundacion"),
 });
 
 export type PatientFormValues = z.infer<typeof patientFormSchema>;

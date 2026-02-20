@@ -6,10 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { BankAccountForm } from "@/components/settings/bank-account-form";
+import { getBankAccount } from "@/actions/bank-accounts";
 
 export default async function PerfilPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
+
+  const isTherapist = session.user.role === "terapeuta";
+  const bankAccount = isTherapist ? await getBankAccount(session.user.id) : null;
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -40,6 +45,10 @@ export default async function PerfilPage() {
       </Card>
 
       <ProfileForms userName={session.user.name || ""} />
+
+      {isTherapist && (
+        <BankAccountForm userId={session.user.id} bankAccount={bankAccount} />
+      )}
     </div>
   );
 }

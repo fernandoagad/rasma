@@ -123,6 +123,7 @@ export async function getPatientAppointments(patientId: string) {
       status: appointments.status,
       sessionType: appointments.sessionType,
       modality: appointments.modality,
+      therapistId: appointments.therapistId,
       therapistName: users.name,
       hasNote: sql<boolean>`case when ${sessionNotes.id} is not null then 1 else 0 end`,
     })
@@ -156,6 +157,7 @@ export async function getPatientNotes(patientId: string) {
     .select({
       id: sessionNotes.id,
       createdAt: sessionNotes.createdAt,
+      therapistId: sessionNotes.therapistId,
       therapistName: users.name,
       appointmentDate: appointments.dateTime,
       appointmentId: appointments.id,

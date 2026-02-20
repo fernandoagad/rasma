@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Table,
@@ -26,7 +26,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -36,10 +35,10 @@ import { UI } from "@/constants/ui";
 import { deleteExpense, bulkDeleteExpenses, bulkUpdateCategory } from "@/actions/expenses";
 import { toast } from "sonner";
 import {
-  Search,
   MoreVertical,
   Eye,
   ExternalLink,
+  Pencil,
   Trash2,
   X,
   FileText,
@@ -48,6 +47,7 @@ import {
   CheckSquare,
   Tag,
 } from "lucide-react";
+import Link from "next/link";
 
 interface Expense {
   id: string;
@@ -75,9 +75,6 @@ export function ExpenseTable({ expenses }: { expenses: Expense[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  // Search
-  const [searchQuery, setSearchQuery] = useState("");
-
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -88,28 +85,16 @@ export function ExpenseTable({ expenses }: { expenses: Expense[] }) {
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Client-side filtering
-  const filtered = useMemo(() => {
-    if (!searchQuery) return expenses;
-    const q = searchQuery.toLowerCase();
-    return expenses.filter(
-      (e) =>
-        e.description.toLowerCase().includes(q) ||
-        (e.notes && e.notes.toLowerCase().includes(q)) ||
-        (e.creator?.name && e.creator.name.toLowerCase().includes(q))
-    );
-  }, [expenses, searchQuery]);
-
   const allSelected =
-    filtered.length > 0 && filtered.every((e) => selectedIds.has(e.id));
+    expenses.length > 0 && expenses.every((e) => selectedIds.has(e.id));
   const someSelected =
-    selectedIds.size > 0 && selectedIds.size < filtered.length;
+    selectedIds.size > 0 && selectedIds.size < expenses.length;
 
   const toggleAll = () => {
     if (allSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filtered.map((e) => e.id)));
+      setSelectedIds(new Set(expenses.map((e) => e.id)));
     }
   };
 
@@ -182,19 +167,6 @@ export function ExpenseTable({ expenses }: { expenses: Expense[] }) {
 
   return (
     <div className="space-y-3">
-      {/* Search bar */}
-      {expenses.length > 0 && (
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por descripción, notas o creador..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9"
-          />
-        </div>
-      )}
-
       {/* Bulk action bar */}
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 rounded-xl border border-rasma-teal/30 bg-rasma-teal/5 px-4 py-2.5 flex-wrap">
@@ -264,12 +236,6 @@ export function ExpenseTable({ expenses }: { expenses: Expense[] }) {
           title="No hay gastos registrados"
           description="Registra un nuevo gasto para comenzar."
         />
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          icon={Search}
-          title="Sin resultados"
-          description="No se encontraron gastos con esa búsqueda."
-        />
       ) : (
         <div className="rounded-xl border bg-card">
           <Table>
@@ -312,7 +278,7 @@ export function ExpenseTable({ expenses }: { expenses: Expense[] }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((e) => {
+              {expenses.map((e) => {
                 const isSelected = selectedIds.has(e.id);
                 const hasReceipt = !!e.receiptViewLink;
                 const previewable =
@@ -433,9 +399,15 @@ export function ExpenseTable({ expenses }: { expenses: Expense[] }) {
                               </a>
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuItem asChild>
+                            <Link href={`/gastos/${e.id}/editar`} className="flex items-center gap-2">
+                              <Pencil className="h-4 w-4" /> Editar
+                            </Link>
+                          </DropdownMenuItem>
                           {(previewable || hasReceipt) && (
                             <DropdownMenuSeparator />
                           )}
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-red-600 focus:text-red-600"
                             onClick={() => setDeleteTarget(e)}

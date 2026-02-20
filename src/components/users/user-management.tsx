@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { createUser, updateUser, adminResetPassword, bulkUpdateUsers } from "@/actions/users";
+import { createUser, updateUser, adminResetPassword, bulkUpdateUsers, deactivateUser } from "@/actions/users";
 import {
   Table,
   TableBody,
@@ -29,6 +29,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -44,6 +54,7 @@ import {
   Pencil,
   UserCog,
   XCircle,
+  Trash2,
 } from "lucide-react";
 import { UI } from "@/constants/ui";
 import { toast } from "sonner";
@@ -85,6 +96,7 @@ export function UserManagement({ users }: { users: User[] }) {
   const [editUser, setEditUser] = useState<User | null>(null);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
   const [bulkPending, startBulkTransition] = useTransition();
 
   const [state, formAction, isPending] = useActionState(
@@ -458,6 +470,38 @@ export function UserManagement({ users }: { users: User[] }) {
         </Dialog>
       )}
 
+      {/* Deactivate user confirmation */}
+      <AlertDialog open={!!deactivateTarget} onOpenChange={(open) => !open && setDeactivateTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{UI.common.confirm}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {UI.users.confirmRemove}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{UI.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => {
+                if (!deactivateTarget) return;
+                startBulkTransition(async () => {
+                  const result = await deactivateUser(deactivateTarget.id);
+                  if ("error" in result) {
+                    toast.error(result.error);
+                  } else {
+                    toast.success(UI.users.removed);
+                  }
+                  setDeactivateTarget(null);
+                });
+              }}
+            >
+              {UI.common.delete}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Professionals table — matches asset design */}
       <div className="rounded-xl border bg-card">
         <Table>
@@ -574,23 +618,30 @@ export function UserManagement({ users }: { users: User[] }) {
                           {UI.users.resetPassword}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => {
-                            startBulkTransition(async () => {
-                              const result = await bulkUpdateUsers([user.id], { active: !user.active });
-                              if (result.success) {
-                                toast.success(user.active ? UI.users.deactivated : "Usuario activado");
-                              }
-                            });
-                          }}
-                          className={cn(
-                            "cursor-pointer",
-                            user.active && "text-rasma-red focus:text-rasma-red"
-                          )}
-                        >
-                          <XCircle className="mr-2 h-4 w-4" />
-                          {user.active ? UI.bulk.deactivate : "Activar"}
-                        </DropdownMenuItem>
+                        {user.active ? (
+                          <DropdownMenuItem
+                            onClick={() => setDeactivateTarget(user)}
+                            className="cursor-pointer text-rasma-red focus:text-rasma-red"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {UI.common.delete}
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            onClick={() => {
+                              startBulkTransition(async () => {
+                                const result = await bulkUpdateUsers([user.id], { active: true });
+                                if (result.success) {
+                                  toast.success("Usuario activado");
+                                }
+                              });
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Activar
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

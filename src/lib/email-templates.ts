@@ -5,7 +5,7 @@
  * Used by email.ts for defaults, admin actions for listing, and preview rendering.
  */
 
-export type TemplateCategory = "auth" | "appointments" | "payments" | "treatment" | "system";
+export type TemplateCategory = "auth" | "appointments" | "payments" | "treatment" | "rrhh" | "system";
 
 export type TemplateId =
   | "password_reset_link"
@@ -25,6 +25,10 @@ export type TemplateId =
   | "payment_status"
   | "treatment_plan_created"
   | "treatment_plan_status"
+  | "intern_interview_scheduled"
+  | "intern_accepted"
+  | "intern_rejected"
+  | "payout_processed"
   | "test_email";
 
 export interface TemplateDefinition {
@@ -43,6 +47,7 @@ export const CATEGORY_LABELS: Record<TemplateCategory, string> = {
   appointments: "Citas",
   payments: "Pagos",
   treatment: "Planes de Tratamiento",
+  rrhh: "Recursos Humanos",
   system: "Sistema",
 };
 
@@ -351,6 +356,86 @@ export const TEMPLATE_REGISTRY: TemplateDefinition[] = [
     sampleVars: {
       patientName: "María González",
       newStatus: "Completado",
+    },
+  },
+
+  // ============================================================
+  // RRHH — INTERN TRACKING
+  // ============================================================
+  {
+    id: "intern_interview_scheduled",
+    label: "Entrevista de pasantía programada",
+    description: "Se envía cuando se agenda una entrevista para un postulante de pasantía.",
+    category: "rrhh",
+    variables: ["applicantName", "date", "time", "meetLink"],
+    defaultSubject: "Entrevista programada — RASMA",
+    defaultBody: `{{p_start}}Hola <strong>{{applicantName}}</strong>, le informamos que se ha programado una entrevista para su postulación de pasantía en Fundación RASMA.{{p_end}}
+{{details_table}}
+{{meet_button}}
+{{p_start}}Por favor, confirme su asistencia respondiendo a este correo.{{p_end}}
+{{muted_start}}Si necesita reprogramar, comuníquese con nosotros lo antes posible.{{muted_end}}`,
+    sampleVars: {
+      applicantName: "Ana Martínez",
+      date: "lunes, 3 de marzo de 2026",
+      time: "10:00",
+      meetLink: "https://meet.google.com/abc-defg-hij",
+    },
+  },
+  {
+    id: "intern_accepted",
+    label: "Pasantía aceptada",
+    description: "Se envía cuando un postulante es aceptado como pasante.",
+    category: "rrhh",
+    variables: ["applicantName", "supervisorName", "startDate", "university", "program"],
+    defaultSubject: "Postulación aceptada — Pasantía RASMA",
+    defaultBody: `{{p_start}}Hola <strong>{{applicantName}}</strong>, nos complace informarle que su postulación para realizar una pasantía en Fundación RASMA ha sido <strong>aceptada</strong>.{{p_end}}
+{{details_table}}
+{{p_start}}Su supervisor/a se pondrá en contacto con usted para coordinar los detalles de inicio.{{p_end}}
+{{muted_start}}Si tiene preguntas, no dude en comunicarse con nuestro equipo de Recursos Humanos.{{muted_end}}`,
+    sampleVars: {
+      applicantName: "Ana Martínez",
+      supervisorName: "Dra. María González",
+      startDate: "10 de marzo de 2026",
+      university: "Universidad de Chile",
+      program: "Psicología",
+    },
+  },
+  {
+    id: "intern_rejected",
+    label: "Pasantía rechazada",
+    description: "Se envía cuando un postulante de pasantía no es seleccionado.",
+    category: "rrhh",
+    variables: ["applicantName"],
+    defaultSubject: "Actualización de postulación — RASMA",
+    defaultBody: `{{p_start}}Hola <strong>{{applicantName}}</strong>, agradecemos su interés en realizar una pasantía en Fundación RASMA.{{p_end}}
+{{p_start}}Lamentablemente, en esta oportunidad no nos es posible aceptar su postulación. Le animamos a postular nuevamente en el futuro.{{p_end}}
+{{p_start}}Le deseamos mucho éxito en su formación profesional.{{p_end}}
+{{muted_start}}Este correo fue enviado por el equipo de Recursos Humanos de Fundación RASMA.{{muted_end}}`,
+    sampleVars: {
+      applicantName: "Ana Martínez",
+    },
+  },
+
+  // ============================================================
+  // PAYOUTS
+  // ============================================================
+  {
+    id: "payout_processed",
+    label: "Liquidación procesada",
+    description: "Se envía al terapeuta cuando se procesa y paga su liquidación.",
+    category: "payments",
+    variables: ["therapistName", "periodStart", "periodEnd", "grossAmount", "netAmount"],
+    defaultSubject: "Liquidación procesada — RASMA",
+    defaultBody: `{{p_start}}Hola <strong>{{therapistName}}</strong>, se ha procesado su liquidación.{{p_end}}
+{{details_table}}
+{{p_start}}Si tiene preguntas sobre esta liquidación, comuníquese con la administración.{{p_end}}
+{{muted_start}}Este es un mensaje automático del sistema.{{muted_end}}`,
+    sampleVars: {
+      therapistName: "Dr. Carlos Ruiz",
+      periodStart: "1 de febrero de 2026",
+      periodEnd: "28 de febrero de 2026",
+      grossAmount: "$450.000",
+      netAmount: "$342.000",
     },
   },
 

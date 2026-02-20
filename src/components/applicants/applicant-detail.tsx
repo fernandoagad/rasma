@@ -28,7 +28,11 @@ import {
   Send,
   Trash2,
   MessageSquare,
+  GraduationCap,
+  CalendarPlus,
 } from "lucide-react";
+import { InternCreateDialog } from "@/components/rrhh/intern-create-dialog";
+import { InterviewScheduleDialog } from "@/components/rrhh/interview-schedule-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -88,18 +92,35 @@ const NOTE_TYPE_LABELS: Record<string, string> = {
   estado_cambiado: "Estado cambiado",
 };
 
+interface StaffOption {
+  id: string;
+  name: string;
+  specialty: string | null;
+  role: string;
+}
+
 export function ApplicantDetail({
   applicant,
   isAdmin,
+  internId,
+  isInternApplicant,
+  staffList,
+  hasCalendarAccess,
 }: {
   applicant: ApplicantData;
   isAdmin: boolean;
+  internId?: string;
+  isInternApplicant?: boolean;
+  staffList?: StaffOption[];
+  hasCalendarAccess?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [noteContent, setNoteContent] = useState("");
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showInternDialog, setShowInternDialog] = useState(false);
+  const [showInterviewDialog, setShowInterviewDialog] = useState(false);
 
   let positions: string[] = [];
   try {
@@ -158,7 +179,36 @@ export function ApplicantDetail({
             Postulación del {applicant.createdAt.toLocaleDateString("es-CL", { dateStyle: "long" })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Intern-specific actions */}
+          {isInternApplicant && internId && (
+            <Link href={`/rrhh/pasantias/${internId}`}>
+              <Button variant="outline" size="sm">
+                <GraduationCap className="h-4 w-4 mr-1" />
+                Ver pasantía
+              </Button>
+            </Link>
+          )}
+          {isInternApplicant && !internId && applicant.status === "aceptado" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowInternDialog(true)}
+            >
+              <GraduationCap className="h-4 w-4 mr-1" />
+              Crear pasantía
+            </Button>
+          )}
+          {isInternApplicant && !internId && (applicant.status === "entrevista" || applicant.status === "en_revision") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowInterviewDialog(true)}
+            >
+              <CalendarPlus className="h-4 w-4 mr-1" />
+              Programar entrevista
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -375,6 +425,28 @@ export function ApplicantDetail({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Intern create dialog */}
+      {isInternApplicant && !internId && staffList && (
+        <InternCreateDialog
+          open={showInternDialog}
+          onOpenChange={setShowInternDialog}
+          applicantId={applicant.id}
+          applicantName={applicant.name}
+          staffList={staffList}
+        />
+      )}
+
+      {/* Interview schedule dialog */}
+      {isInternApplicant && !internId && (
+        <InterviewScheduleDialog
+          open={showInterviewDialog}
+          onOpenChange={setShowInterviewDialog}
+          applicantId={applicant.id}
+          applicantName={applicant.name}
+          hasCalendarAccess={hasCalendarAccess ?? false}
+        />
+      )}
     </div>
   );
 }

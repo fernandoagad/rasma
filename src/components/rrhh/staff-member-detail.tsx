@@ -12,6 +12,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { UI } from "@/constants/ui";
 import {
@@ -38,6 +48,8 @@ import {
 } from "lucide-react";
 import { StaffDocumentsTab } from "@/components/rrhh/staff-documents-tab";
 import { StaffAnalyticsCard } from "@/components/rrhh/staff-analytics-card";
+import { deactivateUser } from "@/actions/users";
+import { toast } from "sonner";
 
 interface StaffDocument {
   id: string;
@@ -110,11 +122,12 @@ interface StaffMember {
   benefits: BenefitRecord[];
 }
 
-export function StaffMemberDetail({ member }: { member: StaffMember }) {
+export function StaffMemberDetail({ member, userRole }: { member: StaffMember; userRole: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   // Dialog states
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [showPositionDialog, setShowPositionDialog] = useState(false);
   const [showSalaryDialog, setShowSalaryDialog] = useState(false);
   const [showEvalDialog, setShowEvalDialog] = useState(false);
@@ -138,7 +151,7 @@ export function StaffMemberDetail({ member }: { member: StaffMember }) {
         ) : (
           <AvatarInitials name={member.name} size="lg" />
         )}
-        <div>
+        <div className="flex-1">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-rasma-dark">{member.name}</h1>
             <Badge variant={member.active ? "default" : "destructive"}>
@@ -152,7 +165,47 @@ export function StaffMemberDetail({ member }: { member: StaffMember }) {
           </p>
           <p className="text-sm text-muted-foreground">{member.email}</p>
         </div>
+        {userRole === "admin" && member.active && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setShowRemoveDialog(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" /> {UI.common.delete}
+          </Button>
+        )}
       </div>
+
+      {/* Remove user confirmation */}
+      <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{UI.common.confirm}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {UI.users.confirmRemove}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{UI.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => {
+                startTransition(async () => {
+                  const result = await deactivateUser(member.id);
+                  if ("error" in result) {
+                    toast.error(result.error);
+                  } else {
+                    toast.success(UI.users.removed);
+                    router.push("/rrhh/equipo");
+                  }
+                });
+              }}
+            >
+              {UI.common.delete}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Tabs */}
       <Tabs defaultValue="documents" className="space-y-4">

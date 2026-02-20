@@ -2,8 +2,8 @@
 
 import { requireStaff } from "@/lib/authorization";
 import { db } from "@/lib/db";
-import { patients, appointments, payments, users, sessionNotes } from "@/lib/db/schema";
-import { eq, and, sql, gte, lte, isNull, isNotNull } from "drizzle-orm";
+import { patients, appointments, payments, users, sessionNotes, therapistPayouts } from "@/lib/db/schema";
+import { eq, and, ne, sql, gte, lte, isNull, isNotNull } from "drizzle-orm";
 
 export async function getReportData(params?: { dateFrom?: string; dateTo?: string }) {
   const session = await requireStaff();
@@ -28,6 +28,7 @@ export async function getReportData(params?: { dateFrom?: string; dateTo?: strin
     activePatientsPerTherapist,
     patientFlowResults,
     referralSourceResults,
+    outstandingPerTherapist,
   ] = await Promise.all([
     // Patient stats: 2 queries combined into batch
     Promise.all([
@@ -141,6 +142,14 @@ export async function getReportData(params?: { dateFrom?: string; dateTo?: strin
       .groupBy(patients.referralSource)
       .orderBy(sql`count(*) desc`)
       .limit(10),
+
+    // 7. Outstanding payout amounts per therapist
+    db.select({
+      therapistId: therapistPayouts.therapistId,
+      outstanding: sql<number>`coalesce(sum(${therapistPayouts.netAmount}), 0)`,
+    }).from(therapistPayouts)
+      .where(ne(therapistPayouts.status, "pagado"))
+      .groupBy(therapistPayouts.therapistId),
   ]);
 
   const [[totalPatients], [activePatients]] = patientResults;
@@ -151,6 +160,7 @@ export async function getReportData(params?: { dateFrom?: string; dateTo?: strin
   const revenueMap = new Map(revenuePerTherapist.map(r => [r.therapistId, r.revenue]));
   const notesMap = new Map(notesPerTherapist.map(n => [n.therapistId, n.notesCount]));
   const activePatientsMap = new Map(activePatientsPerTherapist.map(a => [a.therapistId!, a.activePatients]));
+  const outstandingMap = new Map(outstandingPerTherapist.map(o => [o.therapistId, o.outstanding]));
 
   // Merge per-therapist data into combined array
   const therapistDetailStats = therapistDetailedAppts.map(t => {
@@ -170,6 +180,7 @@ export async function getReportData(params?: { dateFrom?: string; dateTo?: strin
       activePatients: activePatientsMap.get(t.therapistId) ?? 0,
       notesCount,
       notesRate: completed > 0 ? Math.round((notesCount / completed) * 100) : 0,
+      outstanding: (outstandingMap.get(t.therapistId) ?? 0) / 100,
     };
   });
 

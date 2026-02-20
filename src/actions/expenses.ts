@@ -3,7 +3,7 @@
 import { requireRole } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { expenses } from "@/lib/db/schema";
-import { eq, and, desc, sql, gte, lte, inArray } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lte, inArray, like } from "drizzle-orm";
 import { logAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -43,6 +43,7 @@ export async function getExpenses(params?: {
   dateFrom?: string;
   dateTo?: string;
   page?: number;
+  search?: string;
 }) {
   await requireRole(ADMIN_SUPERVISOR);
 
@@ -65,6 +66,10 @@ export async function getExpenses(params?: {
 
   if (params?.dateTo) {
     conditions.push(lte(expenses.date, params.dateTo));
+  }
+
+  if (params?.search) {
+    conditions.push(like(expenses.description, `%${params.search}%`));
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -176,6 +181,118 @@ export async function createExpense(
     action: "create",
     entityType: "expense",
     entityId: expense.id,
+    details: { amount: parsed.data.amount, category: parsed.data.category },
+  });
+
+  revalidatePath("/gastos");
+  return { success: true };
+}
+
+export async function getExpenseById(id: string) {
+  await requireRole(ADMIN_SUPERVISOR);
+  const expense = await db.query.expenses.findFirst({
+    where: eq(expenses.id, id),
+  });
+  return expense || null;
+}
+
+export async function updateExpense(
+  _prev: { error?: string; success?: boolean } | undefined,
+  formData: FormData
+) {
+  const session = await requireRole(ADMIN_SUPERVISOR);
+
+  const id = formData.get("id") as string;
+  if (!id) return { error: "ID de gasto requerido." };
+
+  const parsed = expenseSchema.safeParse({
+    description: formData.get("description"),
+    amount: formData.get("amount"),
+    category: formData.get("category"),
+    date: formData.get("date"),
+    notes: formData.get("notes") || undefined,
+  });
+
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const existing = await db.query.expenses.findFirst({
+    where: eq(expenses.id, id),
+  });
+  if (!existing) return { error: "Gasto no encontrado." };
+
+  await db
+    .update(expenses)
+    .set({
+      description: parsed.data.description,
+      amount: Math.round(parsed.data.amount * 100),
+      category: parsed.data.category,
+      date: parsed.data.date,
+      notes: parsed.data.notes || null,
+      updatedAt: new Date(),
+    })
+    .where(eq(expenses.id, id));
+
+  // Handle receipt changes
+  const removeReceipt = formData.get("removeReceipt") === "true";
+  const receiptFile = formData.get("receipt") as File | null;
+
+  if (removeReceipt && existing.receiptDriveFileId) {
+    try {
+      await deleteFileFromDriveById(existing.receiptDriveFileId);
+    } catch (err) {
+      console.error("Failed to delete old receipt:", err);
+    }
+    await db
+      .update(expenses)
+      .set({
+        receiptDriveFileId: null,
+        receiptFileName: null,
+        receiptMimeType: null,
+        receiptViewLink: null,
+      })
+      .where(eq(expenses.id, id));
+  } else if (receiptFile && receiptFile.size > 0) {
+    if (!ALLOWED_RECEIPT_TYPES.includes(receiptFile.type)) {
+      // Skip invalid receipt but continue with the update
+    } else if (receiptFile.size > MAX_RECEIPT_SIZE) {
+      // Skip oversized receipt
+    } else {
+      // Delete old receipt if exists
+      if (existing.receiptDriveFileId) {
+        try {
+          await deleteFileFromDriveById(existing.receiptDriveFileId);
+        } catch (err) {
+          console.error("Failed to delete old receipt:", err);
+        }
+      }
+      try {
+        const buffer = Buffer.from(await receiptFile.arrayBuffer());
+        const result = await uploadExpenseReceipt({
+          buffer,
+          fileName: receiptFile.name,
+          mimeType: receiptFile.type,
+          size: receiptFile.size,
+        });
+        await db
+          .update(expenses)
+          .set({
+            receiptDriveFileId: result.driveFileId,
+            receiptFileName: receiptFile.name,
+            receiptMimeType: receiptFile.type,
+            receiptViewLink: result.viewLink,
+          })
+          .where(eq(expenses.id, id));
+      } catch (err) {
+        console.error("Receipt upload failed:", err);
+      }
+    }
+  }
+
+  await logAudit({
+    userId: session.user.id,
+    action: "update",
+    entityType: "expense",
+    entityId: id,
     details: { amount: parsed.data.amount, category: parsed.data.category },
   });
 

@@ -25,6 +25,15 @@ const statusConfig: Record<string, Record<string, { variant: BadgeVariant; label
     completado: { variant: "info", label: "Completado" },
     suspendido: { variant: "warning", label: "Suspendido" },
   },
+  payout: {
+    pendiente: { variant: "warning", label: "Pendiente" },
+    procesado: { variant: "info", label: "Procesado" },
+    pagado: { variant: "success", label: "Pagado" },
+  },
+  funding_source: {
+    paciente: { variant: "outline", label: "Paciente" },
+    fundacion: { variant: "teal", label: "Fundación" },
+  },
   user: {
     evaluando: { variant: "warning", label: "Evaluando" },
     disponible: { variant: "success", label: "Disponible" },
@@ -40,6 +49,14 @@ const statusConfig: Record<string, Record<string, { variant: BadgeVariant; label
     software: { variant: "muted", label: "Software" },
     personal: { variant: "default", label: "Personal" },
     otros: { variant: "outline", label: "Otros" },
+  },
+  income_category: {
+    donacion: { variant: "success", label: "Donación" },
+    subvencion: { variant: "info", label: "Subvención" },
+    patrocinio: { variant: "teal", label: "Patrocinio" },
+    evento_benefico: { variant: "lime", label: "Evento Benéfico" },
+    convenio: { variant: "warning", label: "Convenio" },
+    otro_ingreso: { variant: "outline", label: "Otro Ingreso" },
   },
   role: {
     admin: { variant: "default", label: "Administrador" },

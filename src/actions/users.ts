@@ -2,7 +2,7 @@
 
 import { requireRole } from "@/lib/authorization";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { users, patients, careTeamMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { createUserSchema, updateUserSchema } from "@/lib/validations/user";
@@ -229,5 +229,48 @@ export async function bulkUpdateUsers(
   });
 
   revalidatePath("/configuracion/usuarios");
+  return { success: true };
+}
+
+export async function deactivateUser(userId: string) {
+  const session = await requireRole(["admin"]);
+
+  if (userId === session.user.id) {
+    return { error: "No puede desactivarse a sí mismo." };
+  }
+
+  const target = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { id: true, name: true, active: true },
+  });
+  if (!target) return { error: "Usuario no encontrado." };
+  if (!target.active) return { error: "El usuario ya está inactivo." };
+
+  await db
+    .update(users)
+    .set({ active: false, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+
+  // Cleanup: unassign as primary therapist
+  await db
+    .update(patients)
+    .set({ primaryTherapistId: null, updatedAt: new Date() })
+    .where(eq(patients.primaryTherapistId, userId));
+
+  // Cleanup: remove from care teams
+  await db
+    .delete(careTeamMembers)
+    .where(eq(careTeamMembers.userId, userId));
+
+  await logAudit({
+    userId: session.user.id,
+    action: "deactivate",
+    entityType: "user",
+    entityId: userId,
+    details: { targetName: target.name },
+  });
+
+  revalidatePath("/configuracion/usuarios");
+  revalidatePath("/rrhh/equipo");
   return { success: true };
 }

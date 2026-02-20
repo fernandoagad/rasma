@@ -32,6 +32,7 @@ import {
   ClipboardList,
   Settings,
   Loader2,
+  Users,
 } from "lucide-react";
 import {
   updateEmailTemplate,
@@ -63,10 +64,11 @@ const categoryIcons: Record<TemplateCategory, React.ElementType> = {
   appointments: Calendar,
   payments: CreditCard,
   treatment: ClipboardList,
+  rrhh: Users,
   system: Settings,
 };
 
-const categories: TemplateCategory[] = ["auth", "appointments", "payments", "treatment", "system"];
+const categories: TemplateCategory[] = ["auth", "appointments", "payments", "treatment", "rrhh", "system"];
 
 export function EmailTemplatesClient({ templates }: Props) {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | null>(null);

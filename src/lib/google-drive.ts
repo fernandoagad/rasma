@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { db } from "@/lib/db";
-import { googleTokens, patientFolders, patientFiles, users } from "@/lib/db/schema";
+import { googleTokens, patientFolders, patientFiles, users, systemSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { Readable } from "stream";
 
@@ -456,6 +456,121 @@ export async function uploadApplicantFile(
       role: "reader",
       type: "anyone",
     },
+  });
+
+  return {
+    driveFileId: driveFile.data.id!,
+    viewLink: driveFile.data.webViewLink || null,
+    downloadLink: driveFile.data.webContentLink || null,
+  };
+}
+
+/**
+ * Get or create the foundation's root folder on Google Drive.
+ * Uses the foundation name from settings, falls back to "RASMA - Fundación".
+ * Persists the folder ID in systemSettings for fast lookups.
+ */
+async function getOrCreateFoundationFolder(): Promise<string> {
+  const SETTINGS_KEY = "drive_foundation_folder_id";
+
+  // Check systemSettings first for cached folder ID
+  const setting = await db.query.systemSettings.findFirst({
+    where: eq(systemSettings.key, SETTINGS_KEY),
+  });
+
+  const authClient = await getAuthenticatedClient();
+  const drive = google.drive({ version: "v3", auth: authClient });
+
+  if (setting) {
+    // Verify the folder still exists
+    try {
+      await drive.files.get({ fileId: setting.value, fields: "id,trashed" });
+      return setting.value;
+    } catch {
+      // Folder deleted or inaccessible — recreate
+    }
+  }
+
+  // Get foundation name from settings for the folder name
+  const infoSetting = await db.query.systemSettings.findFirst({
+    where: eq(systemSettings.key, "foundation_info"),
+  });
+  let foundationName = "Fundación RASMA";
+  if (infoSetting) {
+    try {
+      const info = JSON.parse(infoSetting.value);
+      if (info.name) foundationName = info.name;
+    } catch { /* use default */ }
+  }
+
+  const folderName = `RASMA - ${foundationName}`;
+
+  // Search for existing folder by name
+  const search = await drive.files.list({
+    q: `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    fields: "files(id)",
+    spaces: "drive",
+  });
+
+  let folderId: string;
+  if (search.data.files?.length) {
+    folderId = search.data.files[0].id!;
+  } else {
+    const folder = await drive.files.create({
+      requestBody: {
+        name: folderName,
+        mimeType: "application/vnd.google-apps.folder",
+      },
+      fields: "id",
+    });
+    folderId = folder.data.id!;
+  }
+
+  // Persist in systemSettings
+  await db
+    .insert(systemSettings)
+    .values({ key: SETTINGS_KEY, value: folderId })
+    .onConflictDoUpdate({
+      target: systemSettings.key,
+      set: { value: folderId, updatedAt: new Date() },
+    });
+
+  return folderId;
+}
+
+/**
+ * Upload a foundation document to Google Drive.
+ * Stored under "RASMA - Fundación" folder.
+ */
+export async function uploadFoundationDocument(
+  file: {
+    buffer: Buffer;
+    fileName: string;
+    mimeType: string;
+    size: number;
+  }
+) {
+  const parentFolderId = await getOrCreateFoundationFolder();
+
+  const auth = await getAuthenticatedClient();
+  const drive = google.drive({ version: "v3", auth });
+
+  const stream = Readable.from(file.buffer);
+  const driveFile = await drive.files.create({
+    requestBody: {
+      name: file.fileName,
+      parents: [parentFolderId],
+    },
+    media: {
+      mimeType: file.mimeType,
+      body: stream,
+    },
+    fields: "id,webViewLink,webContentLink",
+  });
+
+  await drive.permissions.create({
+    fileId: driveFile.data.id!,
+    requestBody: { role: "reader", type: "anyone" },
   });
 
   return {

@@ -64,6 +64,7 @@ interface Appointment {
   status: string;
   sessionType: string;
   modality: string;
+  therapistId: string;
   therapistName: string;
   hasNote?: boolean;
 }
@@ -79,6 +80,7 @@ interface Payment {
 interface Note {
   id: string;
   createdAt: Date;
+  therapistId: string;
   therapistName: string;
   appointmentDate: Date;
   appointmentId?: string;
@@ -157,6 +159,7 @@ interface PatientDetailProps {
     primaryTherapist: { id: string; name: string } | null;
   };
   userRole: string;
+  userId: string;
   appointments?: Appointment[];
   payments?: Payment[];
   notes?: Note[];
@@ -180,12 +183,17 @@ const sessionTypeLabels: Record<string, string> = {
   evaluacion: "Evaluación",
 };
 
-export function PatientDetail({ patient, userRole, appointments = [], payments = [], notes = [], plans = [], summary, files = [] }: PatientDetailProps) {
+export function PatientDetail({ patient, userRole, userId, appointments = [], payments = [], notes = [], plans = [], summary, files = [] }: PatientDetailProps) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
+  const [noteFilter, setNoteFilter] = useState<"mine" | "all">(userRole === "terapeuta" ? "mine" : "all");
+  const [apptFilter, setApptFilter] = useState<"mine" | "all">(userRole === "terapeuta" ? "mine" : "all");
   const canDelete = ["admin", "terapeuta"].includes(userRole);
   const canSeeNotes = ["admin", "terapeuta", "supervisor"].includes(userRole);
   const fullName = `${patient.firstName} ${patient.lastName}`;
+
+  const filteredNotes = noteFilter === "mine" ? notes.filter((n) => n.therapistId === userId) : notes;
+  const filteredAppointments = apptFilter === "mine" ? appointments.filter((a) => a.therapistId === userId) : appointments;
 
   let clinicalProfile: { strengths?: string; objectives?: string; familySupport?: string; interests?: string } = {};
   if (patient.clinicalProfile) {
@@ -309,19 +317,44 @@ export function PatientDetail({ patient, userRole, appointments = [], payments =
         </div>
       )}
 
+      {/* Quick-glance patient info bar */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-muted-foreground px-1">
+        {patient.primaryTherapist && (
+          <span className="flex items-center gap-1.5">
+            <User className="h-3.5 w-3.5" />
+            Terapeuta: <span className="font-medium text-foreground">{patient.primaryTherapist.name}</span>
+          </span>
+        )}
+        {patient.phone && (
+          <span className="flex items-center gap-1.5">
+            <Phone className="h-3.5 w-3.5" /> {patient.phone}
+          </span>
+        )}
+        {patient.email && (
+          <span className="flex items-center gap-1.5">
+            <Mail className="h-3.5 w-3.5" /> {patient.email}
+          </span>
+        )}
+        {patient.dateOfBirth && (
+          <span className="flex items-center gap-1.5">
+            <Calendar className="h-3.5 w-3.5" /> {patient.dateOfBirth}
+          </span>
+        )}
+      </div>
+
       {/* Tabs */}
       <Tabs defaultValue="info">
         <TabsList className="flex-wrap">
           <TabsTrigger value="info">{UI.patients.tabInfo}</TabsTrigger>
           <TabsTrigger value="appointments">
-            Citas ({appointments.length})
+            Citas ({filteredAppointments.length})
           </TabsTrigger>
           <TabsTrigger value="payments">
             Pagos ({payments.length})
           </TabsTrigger>
           {canSeeNotes && (
             <TabsTrigger value="notes">
-              Notas ({notes.length})
+              Notas ({filteredNotes.length})
             </TabsTrigger>
           )}
           {canSeeNotes && (
@@ -407,17 +440,46 @@ export function PatientDetail({ patient, userRole, appointments = [], payments =
         </TabsContent>
 
         {/* Appointments tab */}
-        <TabsContent value="appointments" className="mt-4">
-          {appointments.length === 0 ? (
-            <EmptyState icon={Calendar} title="Sin citas" description="Este paciente no tiene citas registradas." />
+        <TabsContent value="appointments" className="mt-4 space-y-3">
+          {/* Therapist filter toggle */}
+          <div className="flex items-center gap-1 rounded-lg border p-0.5 w-fit">
+            <button
+              onClick={() => setApptFilter("mine")}
+              className={cn(
+                "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                apptFilter === "mine"
+                  ? "bg-rasma-dark text-rasma-lime"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Mis citas ({appointments.filter((a) => a.therapistId === userId).length})
+            </button>
+            <button
+              onClick={() => setApptFilter("all")}
+              className={cn(
+                "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                apptFilter === "all"
+                  ? "bg-rasma-dark text-rasma-lime"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Todas ({appointments.length})
+            </button>
+          </div>
+
+          {filteredAppointments.length === 0 ? (
+            <EmptyState icon={Calendar} title="Sin citas" description={
+              apptFilter === "mine" ? "No tienes citas con este paciente." : "Este paciente no tiene citas registradas."
+            } />
           ) : (
             <Card className="py-0 gap-0 overflow-hidden">
               <CardContent className="p-0">
                 <div className="divide-y">
-                  {appointments.map((appt) => {
+                  {filteredAppointments.map((appt) => {
                     const dt = new Date(appt.dateTime);
                     const isCompleted = appt.status === "completada";
                     const needsNote = isCompleted && !appt.hasNote;
+                    const isOwn = appt.therapistId === userId;
                     return (
                       <Link key={appt.id} href={`/citas/${appt.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors">
                         <div className={cn(
@@ -427,9 +489,16 @@ export function PatientDetail({ patient, userRole, appointments = [], payments =
                           <Calendar className={cn("h-4 w-4", needsNote ? "text-amber-500" : "text-muted-foreground")} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">
-                            {dt.toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">
+                              {dt.toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+                            </p>
+                            {apptFilter === "all" && (
+                              <Badge variant={isOwn ? "default" : "secondary"} className="text-[10px] px-1.5">
+                                {isOwn ? "Yo" : appt.therapistName}
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-[11px] text-muted-foreground">
                             {dt.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })} · {appt.durationMinutes}min · {appt.therapistName} · {sessionTypeLabels[appt.sessionType] || appt.sessionType}
                           </p>
@@ -485,41 +554,76 @@ export function PatientDetail({ patient, userRole, appointments = [], payments =
         {/* Notes tab */}
         {canSeeNotes && (
           <TabsContent value="notes" className="mt-4 space-y-3">
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between">
+              {/* Therapist filter toggle */}
+              <div className="flex items-center gap-1 rounded-lg border p-0.5">
+                <button
+                  onClick={() => setNoteFilter("mine")}
+                  className={cn(
+                    "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                    noteFilter === "mine"
+                      ? "bg-rasma-dark text-rasma-lime"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Mis notas ({notes.filter((n) => n.therapistId === userId).length})
+                </button>
+                <button
+                  onClick={() => setNoteFilter("all")}
+                  className={cn(
+                    "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                    noteFilter === "all"
+                      ? "bg-rasma-dark text-rasma-lime"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Todas ({notes.length})
+                </button>
+              </div>
               <Link href="/notas/nueva">
                 <Button size="sm" className="bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90 gap-1.5">
                   <FileText className="h-3.5 w-3.5" /> Nueva nota
                 </Button>
               </Link>
             </div>
-            {notes.length === 0 ? (
-              <EmptyState icon={FileText} title="Sin notas clínicas" description="Este paciente no tiene notas clínicas." />
+            {filteredNotes.length === 0 ? (
+              <EmptyState icon={FileText} title="Sin notas clínicas" description={
+                noteFilter === "mine" ? "No tienes notas para este paciente." : "Este paciente no tiene notas clínicas."
+              } />
             ) : (
               <Card className="py-0 gap-0 overflow-hidden">
                 <CardContent className="p-0">
                   <div className="divide-y">
-                    {notes.map((note) => (
-                      <Link key={note.id} href={`/notas/${note.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors">
-                        <div className="h-9 w-9 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
-                          <Shield className="h-4 w-4 text-green-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">
-                            Nota SOAP
-                            {note.sessionType && ` — ${sessionTypeLabels[note.sessionType] || note.sessionType}`}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {new Date(note.appointmentDate).toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" })}
-                            {" · "}
-                            {note.therapistName}
-                            {note.modality && ` · ${note.modality === "online" ? "Online" : "Presencial"}`}
-                          </p>
-                        </div>
-                        <span className="flex items-center gap-1 text-[10px] text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-200 shrink-0">
-                          <Shield className="h-2.5 w-2.5" /> Encriptado
-                        </span>
-                      </Link>
-                    ))}
+                    {filteredNotes.map((note) => {
+                      const isOwnNote = note.therapistId === userId;
+                      return (
+                        <Link key={note.id} href={`/notas/${note.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors">
+                          <div className="h-9 w-9 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+                            <Shield className="h-4 w-4 text-green-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">
+                                Nota SOAP
+                                {note.sessionType && ` — ${sessionTypeLabels[note.sessionType] || note.sessionType}`}
+                              </p>
+                              <Badge variant={isOwnNote ? "default" : "secondary"} className="text-[10px] px-1.5">
+                                {isOwnNote ? "Yo" : note.therapistName}
+                              </Badge>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                              {new Date(note.appointmentDate).toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" })}
+                              {" · "}
+                              {note.therapistName}
+                              {note.modality && ` · ${note.modality === "online" ? "Online" : "Presencial"}`}
+                            </p>
+                          </div>
+                          <span className="flex items-center gap-1 text-[10px] text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-200 shrink-0">
+                            <Shield className="h-2.5 w-2.5" /> Encriptado
+                          </span>
+                        </Link>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>

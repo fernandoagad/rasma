@@ -2,22 +2,24 @@
 
 import { requireRole } from "@/lib/authorization";
 import { db } from "@/lib/db";
-import { users, patients, appointments, applicants } from "@/lib/db/schema";
+import { users, patients, appointments, applicants, interns } from "@/lib/db/schema";
 import { eq, sql, gte, and } from "drizzle-orm";
 
 export async function getHRDashboardStats() {
   await requireRole(["admin", "rrhh"]);
 
-  const [totalApplicantsResult, newApplicantsResult, teamSizeResult] = await Promise.all([
+  const [totalApplicantsResult, newApplicantsResult, teamSizeResult, activeInternsResult] = await Promise.all([
     db.select({ count: sql<number>`count(*)` }).from(applicants),
     db.select({ count: sql<number>`count(*)` }).from(applicants).where(eq(applicants.status, "nuevo")),
     db.select({ count: sql<number>`count(*)` }).from(users).where(eq(users.active, true)),
+    db.select({ count: sql<number>`count(*)` }).from(interns).where(eq(interns.status, "activo")),
   ]);
 
   return {
     totalApplicants: totalApplicantsResult[0]?.count ?? 0,
     newApplicants: newApplicantsResult[0]?.count ?? 0,
     teamSize: teamSizeResult[0]?.count ?? 0,
+    activeInterns: activeInternsResult[0]?.count ?? 0,
   };
 }
 

@@ -49,6 +49,7 @@ interface PatientData {
   notes: string | null;
   primaryTherapistId: string | null;
   status: string;
+  type?: string;
 }
 
 interface PatientFormProps {
@@ -174,6 +175,21 @@ export function PatientForm({
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(UI.patients.statuses).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="type">Tipo de Paciente</Label>
+            <Select name="type" defaultValue={patient?.type || "fundacion"}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(UI.patients.types).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
                   </SelectItem>

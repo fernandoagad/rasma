@@ -30,6 +30,7 @@ export default async function PatientDetailPage({
     <PatientDetail
       patient={patient}
       userRole={session.user.role}
+      userId={session.user.id}
       appointments={patientAppointments}
       payments={patientPayments}
       notes={patientNotes}

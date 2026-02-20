@@ -213,7 +213,7 @@ const sessionTypeLabels: Record<string, string> = {
   grupal: "Grupal", evaluacion: "Evaluación",
 };
 const modalityLabels: Record<string, string> = { presencial: "Presencial", online: "Online" };
-const methodLabels: Record<string, string> = { efectivo: "Efectivo", transferencia: "Transferencia", tarjeta: "Tarjeta", otro: "Otro" };
+const methodLabels: Record<string, string> = { efectivo: "Efectivo", transferencia: "Transferencia", tarjeta: "Tarjeta", mercadopago: "MercadoPago", otro: "Otro" };
 const paymentStatusLabels: Record<string, string> = { pendiente: "Pendiente", pagado: "Pagado", parcial: "Parcial", cancelado: "Cancelado" };
 const appointmentStatusLabels: Record<string, string> = { completada: "Completada", cancelada: "Cancelada", no_asistio: "No asistió", programada: "Programada" };
 const roleLabels: Record<string, string> = { admin: "Administrador", terapeuta: "Terapeuta", recepcionista: "Recepcionista", supervisor: "Supervisor", rrhh: "Recursos Humanos" };
@@ -527,6 +527,51 @@ export async function sendPaymentStatusUpdate(to: string, data: PaymentEmailData
 }
 
 // ============================================================
+// 4b. PAYOUT EMAILS
+// ============================================================
+
+export interface PayoutEmailData {
+  therapistName: string;
+  periodStart: string;
+  periodEnd: string;
+  grossAmount: string;
+  commissionAmount: string;
+  deductionAmount: string;
+  netAmount: string;
+  bankTransferRef?: string | null;
+}
+
+export async function sendPayoutProcessed(to: string, data: PayoutEmailData): Promise<boolean> {
+  const title = "Liquidación Procesada";
+  const rows: [string, string][] = [
+    ["Terapeuta", data.therapistName],
+    ["Período", `${data.periodStart} — ${data.periodEnd}`],
+    ["Monto bruto", data.grossAmount],
+    ["Comisión fundación", `-${data.commissionAmount}`],
+    ["Descuento", `-${data.deductionAmount}`],
+    ["<strong>Neto a pagar</strong>", `<strong>${data.netAmount}</strong>`],
+  ];
+  if (data.bankTransferRef) rows.push(["Ref. transferencia", data.bankTransferRef]);
+
+  const html = wrapEmail(title,
+    p(`Hola <strong>${data.therapistName}</strong>, se ha procesado su liquidación.`) +
+    detailsTable(rows) +
+    p("Si tiene preguntas sobre esta liquidación, comuníquese con la administración.") +
+    muted("Este es un mensaje automático del sistema.")
+  );
+  const text = textWrap(title,
+    `Hola ${data.therapistName}, se ha procesado su liquidación.\n\n${textDetails(rows.map(([l, v]) => [l.replace(/<[^>]*>/g, ""), v.replace(/<[^>]*>/g, "")]))}\n\nSi tiene preguntas, comuníquese con la administración.`
+  );
+  return sendEmail(to, "Liquidación procesada — RASMA", html, text, "payout_processed", {
+    therapistName: data.therapistName,
+    periodStart: data.periodStart,
+    periodEnd: data.periodEnd,
+    grossAmount: data.grossAmount,
+    netAmount: data.netAmount,
+  });
+}
+
+// ============================================================
 // 5. TREATMENT PLAN EMAILS
 // ============================================================
 
@@ -638,7 +683,85 @@ export async function sendApplicantEmail(
 }
 
 // ============================================================
-// 9. PREVIEW RENDERER (for admin UI)
+// 9. INTERN EMAILS
+// ============================================================
+
+export async function sendInternInterviewEmail(
+  to: string,
+  applicantName: string,
+  date: string,
+  time: string,
+  meetLink?: string,
+): Promise<boolean> {
+  const title = "Entrevista Programada";
+  const details: [string, string][] = [
+    ["Postulante", applicantName],
+    ["Fecha", date],
+    ["Hora", time],
+  ];
+  if (meetLink) details.push(["Enlace reunión", `<a href="${meetLink}" style="color:#25c5fa">${meetLink}</a>`]);
+
+  const html = wrapEmail(title,
+    p(`Hola <strong>${applicantName}</strong>, le informamos que se ha programado una entrevista para su postulación de pasantía en Fundación RASMA.`) +
+    detailsTable(details) +
+    (meetLink ? btn(meetLink, "Unirse a la Reunión") : "") +
+    p("Por favor, confirme su asistencia respondiendo a este correo.") +
+    muted("Si necesita reprogramar, comuníquese con nosotros lo antes posible.")
+  );
+  const text = textWrap(title,
+    `Hola ${applicantName}, se ha programado una entrevista para su postulación de pasantía.\n\n${textDetails(details)}\n\nPor favor, confirme su asistencia respondiendo a este correo.`
+  );
+  return sendEmail(to, "Entrevista programada — RASMA", html, text, "intern_interview_scheduled", { applicantName, date, time, meetLink: meetLink || "" });
+}
+
+export async function sendInternAcceptedEmail(
+  to: string,
+  applicantName: string,
+  supervisorName: string,
+  startDate: string,
+  university: string,
+  program: string,
+): Promise<boolean> {
+  const title = "Pasantía Aceptada";
+  const details: [string, string][] = [
+    ["Pasante", applicantName],
+    ["Universidad", university],
+    ["Programa", program],
+    ["Supervisor/a", supervisorName],
+    ["Fecha de inicio", startDate],
+  ];
+
+  const html = wrapEmail(title,
+    p(`Hola <strong>${applicantName}</strong>, nos complace informarle que su postulación para realizar una pasantía en Fundación RASMA ha sido <strong>aceptada</strong>.`) +
+    detailsTable(details) +
+    p("Su supervisor/a se pondrá en contacto con usted para coordinar los detalles de inicio.") +
+    muted("Si tiene preguntas, no dude en comunicarse con nuestro equipo de Recursos Humanos.")
+  );
+  const text = textWrap(title,
+    `Hola ${applicantName}, su postulación de pasantía ha sido aceptada.\n\n${textDetails(details)}\n\nSu supervisor/a se pondrá en contacto con usted para coordinar los detalles de inicio.`
+  );
+  return sendEmail(to, "Postulación aceptada — Pasantía RASMA", html, text, "intern_accepted", { applicantName, supervisorName, startDate, university, program });
+}
+
+export async function sendInternRejectedEmail(
+  to: string,
+  applicantName: string,
+): Promise<boolean> {
+  const title = "Actualización de Postulación";
+  const html = wrapEmail(title,
+    p(`Hola <strong>${applicantName}</strong>, agradecemos su interés en realizar una pasantía en Fundación RASMA.`) +
+    p("Lamentablemente, en esta oportunidad no nos es posible aceptar su postulación. Le animamos a postular nuevamente en el futuro.") +
+    p("Le deseamos mucho éxito en su formación profesional.") +
+    muted("Este correo fue enviado por el equipo de Recursos Humanos de Fundación RASMA.")
+  );
+  const text = textWrap(title,
+    `Hola ${applicantName}, agradecemos su interés en realizar una pasantía en Fundación RASMA.\n\nLamentablemente, en esta oportunidad no nos es posible aceptar su postulación. Le animamos a postular nuevamente en el futuro.\n\nLe deseamos mucho éxito en su formación profesional.`
+  );
+  return sendEmail(to, "Actualización de postulación — RASMA", html, text, "intern_rejected", { applicantName });
+}
+
+// ============================================================
+// 10. PREVIEW RENDERER (for admin UI)
 // ============================================================
 
 export function renderTemplatePreview(templateId: TemplateId): { subject: string; html: string } | null {
@@ -766,6 +889,42 @@ export function renderTemplatePreview(templateId: TemplateId): { subject: string
       body = p(`El plan de tratamiento de <strong>${vars.patientName}</strong> ha cambiado su estado a <strong>${vars.newStatus}</strong>.`) +
         btn(`${APP_URL}/planes`, "Ver Planes");
       break;
+    case "intern_interview_scheduled": {
+      const irows: [string, string][] = [["Postulante", vars.applicantName || ""], ["Fecha", vars.date || ""], ["Hora", vars.time || ""]];
+      if (vars.meetLink) irows.push(["Enlace reunión", `<a href="${vars.meetLink}" style="color:#25c5fa">${vars.meetLink}</a>`]);
+      body = p(`Hola <strong>${vars.applicantName}</strong>, le informamos que se ha programado una entrevista para su postulación de pasantía en Fundación RASMA.`) +
+        detailsTable(irows) + (vars.meetLink ? btn(vars.meetLink, "Unirse a la Reunión") : "") +
+        p("Por favor, confirme su asistencia respondiendo a este correo.") +
+        muted("Si necesita reprogramar, comuníquese con nosotros lo antes posible.");
+      break;
+    }
+    case "intern_accepted": {
+      const arows: [string, string][] = [["Pasante", vars.applicantName || ""], ["Universidad", vars.university || ""], ["Programa", vars.program || ""], ["Supervisor/a", vars.supervisorName || ""], ["Fecha de inicio", vars.startDate || ""]];
+      body = p(`Hola <strong>${vars.applicantName}</strong>, nos complace informarle que su postulación para realizar una pasantía en Fundación RASMA ha sido <strong>aceptada</strong>.`) +
+        detailsTable(arows) +
+        p("Su supervisor/a se pondrá en contacto con usted para coordinar los detalles de inicio.") +
+        muted("Si tiene preguntas, no dude en comunicarse con nuestro equipo de Recursos Humanos.");
+      break;
+    }
+    case "intern_rejected":
+      body = p(`Hola <strong>${vars.applicantName}</strong>, agradecemos su interés en realizar una pasantía en Fundación RASMA.`) +
+        p("Lamentablemente, en esta oportunidad no nos es posible aceptar su postulación. Le animamos a postular nuevamente en el futuro.") +
+        p("Le deseamos mucho éxito en su formación profesional.") +
+        muted("Este correo fue enviado por el equipo de Recursos Humanos de Fundación RASMA.");
+      break;
+    case "payout_processed": {
+      const pyrows: [string, string][] = [
+        ["Terapeuta", vars.therapistName || ""],
+        ["Período", `${vars.periodStart || ""} — ${vars.periodEnd || ""}`],
+        ["Monto bruto", vars.grossAmount || ""],
+        ["Neto a pagar", `<strong>${vars.netAmount || ""}</strong>`],
+      ];
+      body = p(`Hola <strong>${vars.therapistName}</strong>, se ha procesado su liquidación.`) +
+        detailsTable(pyrows) +
+        p("Si tiene preguntas sobre esta liquidación, comuníquese con la administración.") +
+        muted("Este es un mensaje automático del sistema.");
+      break;
+    }
     case "test_email":
       body = p("Este es un correo de prueba del sistema de notificaciones de RASMA.") +
         p("Si está viendo este correo, la configuración de email funciona correctamente.") +

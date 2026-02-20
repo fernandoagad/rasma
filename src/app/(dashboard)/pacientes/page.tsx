@@ -8,12 +8,17 @@ import { UI } from "@/constants/ui";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Suspense } from "react";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export default async function PacientesPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; status?: string; page?: string }>;
 }) {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+
   const params = await searchParams;
   const [{ patients, total, page, pageSize, totalPages }, therapists] = await Promise.all([
     getPatientsEnriched({
@@ -43,7 +48,7 @@ export default async function PacientesPage({
         <PatientSearch />
       </Suspense>
 
-      <PatientTable patients={patients} therapists={therapists} />
+      <PatientTable patients={patients} therapists={therapists} userRole={session.user.role} />
 
       <Suspense>
         <Pagination

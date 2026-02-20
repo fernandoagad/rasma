@@ -3,13 +3,14 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { UserPlus, Users, ClipboardCheck, Gift } from "lucide-react";
+import { UserPlus, Users, ClipboardCheck, Gift, GraduationCap } from "lucide-react";
 import { getHRDashboardStats } from "@/actions/rrhh";
 import { Badge } from "@/components/ui/badge";
 import { PostularShortcut } from "@/components/rrhh/postular-shortcut";
 
 const items = [
   { href: "/rrhh/postulantes", icon: UserPlus, title: "Postulantes", description: "Gestionar postulaciones y candidatos", countKey: "totalApplicants" as const },
+  { href: "/rrhh/pasantias", icon: GraduationCap, title: "Pasantías", description: "Programa de pasantías universitarias", countKey: "activeInterns" as const },
   { href: "/rrhh/equipo", icon: Users, title: "Equipo", description: "Vista general del equipo profesional", countKey: "teamSize" as const },
   { href: "/rrhh/evaluaciones", icon: ClipboardCheck, title: "Evaluaciones", description: "Evaluaciones de desempeño", countKey: undefined },
   { href: "/rrhh/beneficios", icon: Gift, title: "Beneficios", description: "Gestión de beneficios", countKey: undefined },
@@ -28,7 +29,7 @@ export default async function RRHHPage() {
       {/* Postulacion shortcut */}
       <PostularShortcut />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => {
           const Icon = item.icon;
           const count = stats && item.countKey ? stats[item.countKey] : null;

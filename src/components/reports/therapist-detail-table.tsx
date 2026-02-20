@@ -23,9 +23,10 @@ interface TherapistRow {
   activePatients: number;
   notesCount: number;
   notesRate: number;
+  outstanding: number;
 }
 
-type SortKey = "name" | "appointments" | "completionRate" | "noShowRate" | "revenue" | "activePatients" | "notesRate";
+type SortKey = "name" | "appointments" | "completionRate" | "noShowRate" | "revenue" | "activePatients" | "notesRate" | "outstanding";
 
 const columns: { key: SortKey; label: string; numeric: boolean }[] = [
   { key: "name", label: "Nombre", numeric: false },
@@ -33,6 +34,7 @@ const columns: { key: SortKey; label: string; numeric: boolean }[] = [
   { key: "completionRate", label: "Cumplimiento %", numeric: true },
   { key: "noShowRate", label: "No Asistio %", numeric: true },
   { key: "revenue", label: "Ingresos", numeric: true },
+  { key: "outstanding", label: "Pend. Liq.", numeric: true },
   { key: "activePatients", label: "Pacientes Activos", numeric: true },
   { key: "notesRate", label: "Notas %", numeric: true },
 ];
@@ -82,6 +84,7 @@ export function TherapistDetailTable({ therapists }: { therapists: TherapistRow[
     completionRate: 100,
     noShowRate: Math.max(...therapists.map(t => t.noShowRate), 1),
     revenue: Math.max(...therapists.map(t => t.revenue), 1),
+    outstanding: Math.max(...therapists.map(t => t.outstanding), 1),
     activePatients: Math.max(...therapists.map(t => t.activePatients), 1),
     notesRate: 100,
   }), [therapists]);
@@ -143,6 +146,17 @@ export function TherapistDetailTable({ therapists }: { therapists: TherapistRow[
                     />
                     <span className="relative z-10 px-1 tabular-nums">
                       ${t.revenue.toLocaleString("es-CL")}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="relative flex items-center">
+                    <div
+                      className="absolute inset-y-0 left-0 bg-amber-500/15 rounded"
+                      style={{ width: `${maxValues.outstanding > 0 ? Math.min((t.outstanding / maxValues.outstanding) * 100, 100) : 0}%` }}
+                    />
+                    <span className="relative z-10 px-1 tabular-nums">
+                      ${t.outstanding.toLocaleString("es-CL")}
                     </span>
                   </div>
                 </TableCell>

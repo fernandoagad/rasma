@@ -198,6 +198,11 @@ export const patients = sqliteTable(
     })
       .notNull()
       .default("activo"),
+    type: text("type", {
+      enum: ["fundacion", "externo"],
+    })
+      .notNull()
+      .default("fundacion"),
     deletedAt: integer("deleted_at", { mode: "timestamp" }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
@@ -390,11 +395,20 @@ export const payments = sqliteTable(
       .notNull()
       .default("pendiente"),
     paymentMethod: text("payment_method", {
-      enum: ["efectivo", "transferencia", "tarjeta", "otro"],
+      enum: ["efectivo", "transferencia", "tarjeta", "mercadopago", "otro"],
     }),
     date: text("date").notNull(), // ISO "YYYY-MM-DD"
     receiptNumber: text("receipt_number"),
     notes: text("notes"),
+    mercadoPagoPreferenceId: text("mercadopago_preference_id"),
+    mercadoPagoPaymentId: text("mercadopago_payment_id"),
+    mercadoPagoStatus: text("mercadopago_status"),
+    checkoutUrl: text("checkout_url"),
+    fundingSource: text("funding_source", {
+      enum: ["paciente", "fundacion"],
+    })
+      .notNull()
+      .default("paciente"),
     createdBy: text("created_by").references(() => users.id),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
@@ -404,6 +418,7 @@ export const payments = sqliteTable(
     index("pay_patient_idx").on(table.patientId),
     index("pay_status_idx").on(table.status),
     index("pay_date_idx").on(table.date),
+    index("pay_funding_idx").on(table.fundingSource),
   ]
 );
 
@@ -451,6 +466,52 @@ export const expenses = sqliteTable(
   (table) => [
     index("exp_category_idx").on(table.category),
     index("exp_date_idx").on(table.date),
+  ]
+);
+
+// ============================================================
+// INCOME (non-patient income: donations, grants, sponsorships)
+// ============================================================
+
+export const income = sqliteTable(
+  "income",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    description: text("description").notNull(),
+    amount: integer("amount").notNull(), // cents
+    category: text("category", {
+      enum: [
+        "donacion",
+        "subvencion",
+        "patrocinio",
+        "evento_benefico",
+        "convenio",
+        "otro_ingreso",
+      ],
+    }).notNull(),
+    donorName: text("donor_name"),
+    referenceNumber: text("reference_number"),
+    date: text("date").notNull(),
+    receiptDriveFileId: text("receipt_drive_file_id"),
+    receiptFileName: text("receipt_file_name"),
+    receiptMimeType: text("receipt_mime_type"),
+    receiptViewLink: text("receipt_view_link"),
+    notes: text("notes"),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("inc_category_idx").on(table.category),
+    index("inc_date_idx").on(table.date),
   ]
 );
 
@@ -528,6 +589,160 @@ export const systemSettings = sqliteTable("system_settings", {
 });
 
 // ============================================================
+// FOUNDATION DOCUMENTS
+// ============================================================
+
+export const foundationDocuments = sqliteTable(
+  "foundation_documents",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    driveFileId: text("drive_file_id").notNull(),
+    fileName: text("file_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    fileSize: integer("file_size"),
+    driveViewLink: text("drive_view_link"),
+    driveDownloadLink: text("drive_download_link"),
+    category: text("category", {
+      enum: [
+        "manual",
+        "legal",
+        "politica",
+        "reglamento",
+        "certificado",
+        "acta",
+        "convenio",
+        "financiero",
+        "otro",
+      ],
+    })
+      .notNull()
+      .default("otro"),
+    label: text("label"),
+    uploadedBy: text("uploaded_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("fdoc_category_idx").on(table.category),
+    index("fdoc_created_idx").on(table.createdAt),
+  ]
+);
+
+// ============================================================
+// THERAPIST BANK ACCOUNTS
+// ============================================================
+
+export const therapistBankAccounts = sqliteTable(
+  "therapist_bank_accounts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .unique()
+      .references(() => users.id, { onDelete: "cascade" }),
+    bankName: text("bank_name").notNull(),
+    accountType: text("account_type", {
+      enum: ["corriente", "vista", "ahorro", "rut"],
+    }).notNull(),
+    accountNumber: text("account_number").notNull(),
+    holderRut: text("holder_rut").notNull(),
+    holderName: text("holder_name").notNull(),
+    email: text("email"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [index("tba_user_idx").on(table.userId)]
+);
+
+// ============================================================
+// THERAPIST PAYOUTS
+// ============================================================
+
+export const therapistPayouts = sqliteTable(
+  "therapist_payouts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    therapistId: text("therapist_id")
+      .notNull()
+      .references(() => users.id),
+    periodStart: text("period_start").notNull(),
+    periodEnd: text("period_end").notNull(),
+    payoutType: text("payout_type", {
+      enum: ["mensual", "por_pago"],
+    }).notNull(),
+    grossAmount: integer("gross_amount").notNull(),
+    commissionAmount: integer("commission_amount").notNull(),
+    deductionAmount: integer("deduction_amount").notNull(),
+    netAmount: integer("net_amount").notNull(),
+    status: text("status", {
+      enum: ["pendiente", "procesado", "pagado"],
+    })
+      .notNull()
+      .default("pendiente"),
+    bankTransferRef: text("bank_transfer_ref"),
+    paidAt: integer("paid_at", { mode: "timestamp" }),
+    notes: text("notes"),
+    createdBy: text("created_by").references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("payout_therapist_idx").on(table.therapistId),
+    index("payout_status_idx").on(table.status),
+    index("payout_period_idx").on(table.periodStart),
+  ]
+);
+
+// ============================================================
+// PAYOUT ITEMS (links payments to a payout)
+// ============================================================
+
+export const payoutItems = sqliteTable(
+  "payout_items",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    payoutId: text("payout_id")
+      .notNull()
+      .references(() => therapistPayouts.id, { onDelete: "cascade" }),
+    paymentId: text("payment_id")
+      .notNull()
+      .references(() => payments.id),
+    patientType: text("patient_type", {
+      enum: ["fundacion", "externo"],
+    }).notNull(),
+    paymentAmount: integer("payment_amount").notNull(),
+    commissionRate: integer("commission_rate").notNull(), // basis points
+    commissionAmount: integer("commission_amount").notNull(),
+  },
+  (table) => [
+    index("pi_payout_idx").on(table.payoutId),
+    index("pi_payment_idx").on(table.paymentId),
+  ]
+);
+
+// ============================================================
 // RELATIONS
 // ============================================================
 
@@ -546,6 +761,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   careTeamMemberships: many(careTeamMembers),
   sentDMs: many(directMessages, { relationName: "dmSender" }),
   receivedDMs: many(directMessages, { relationName: "dmRecipient" }),
+  bankAccount: one(therapistBankAccounts),
+  payouts: many(therapistPayouts),
 }));
 
 export const googleTokensRelations = relations(googleTokens, ({ one }) => ({
@@ -640,6 +857,13 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
 export const expensesRelations = relations(expenses, ({ one }) => ({
   creator: one(users, {
     fields: [expenses.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const incomeRelations = relations(income, ({ one }) => ({
+  creator: one(users, {
+    fields: [income.createdBy],
     references: [users.id],
   }),
 }));
@@ -1065,6 +1289,78 @@ export const applicantNotes = sqliteTable(
 );
 
 // ============================================================
+// INTERN TRACKING TABLES
+// ============================================================
+
+export const interns = sqliteTable(
+  "interns",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    applicantId: text("applicant_id")
+      .notNull()
+      .unique()
+      .references(() => applicants.id),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone").notNull(),
+    university: text("university").notNull(),
+    program: text("program").notNull(),
+    supervisorId: text("supervisor_id")
+      .notNull()
+      .references(() => users.id),
+    startDate: text("start_date").notNull(),
+    endDate: text("end_date"),
+    weeklyHours: integer("weekly_hours").notNull().default(20),
+    status: text("status", {
+      enum: ["activo", "completado", "suspendido"],
+    })
+      .notNull()
+      .default("activo"),
+    notes: text("notes"),
+    googleEventId: text("google_event_id"),
+    meetLink: text("meet_link"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("intern_status_idx").on(table.status),
+    index("intern_supervisor_idx").on(table.supervisorId),
+    index("intern_applicant_idx").on(table.applicantId),
+  ]
+);
+
+export const internHours = sqliteTable(
+  "intern_hours",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    internId: text("intern_id")
+      .notNull()
+      .references(() => interns.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    minutes: integer("minutes").notNull(),
+    description: text("description").notNull(),
+    loggedBy: text("logged_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("ihours_intern_idx").on(table.internId),
+    index("ihours_date_idx").on(table.date),
+  ]
+);
+
+// ============================================================
 // STAFF MANAGEMENT TABLES (HR module)
 // ============================================================
 
@@ -1250,6 +1546,7 @@ export const applicantsRelations = relations(applicants, ({ many, one }) => ({
     fields: [applicants.assignedTo],
     references: [users.id],
   }),
+  intern: one(interns),
 }));
 
 export const applicantFilesRelations = relations(applicantFiles, ({ one }) => ({
@@ -1267,5 +1564,68 @@ export const applicantNotesRelations = relations(applicantNotes, ({ one }) => ({
   author: one(users, {
     fields: [applicantNotes.authorId],
     references: [users.id],
+  }),
+}));
+
+// Intern relations
+export const internsRelations = relations(interns, ({ one, many }) => ({
+  applicant: one(applicants, {
+    fields: [interns.applicantId],
+    references: [applicants.id],
+  }),
+  supervisor: one(users, {
+    fields: [interns.supervisorId],
+    references: [users.id],
+  }),
+  hours: many(internHours),
+}));
+
+export const internHoursRelations = relations(internHours, ({ one }) => ({
+  intern: one(interns, {
+    fields: [internHours.internId],
+    references: [interns.id],
+  }),
+  logger: one(users, {
+    fields: [internHours.loggedBy],
+    references: [users.id],
+  }),
+}));
+
+export const foundationDocumentsRelations = relations(foundationDocuments, ({ one }) => ({
+  uploader: one(users, {
+    fields: [foundationDocuments.uploadedBy],
+    references: [users.id],
+  }),
+}));
+
+// Therapist bank accounts relations
+export const therapistBankAccountsRelations = relations(therapistBankAccounts, ({ one }) => ({
+  user: one(users, {
+    fields: [therapistBankAccounts.userId],
+    references: [users.id],
+  }),
+}));
+
+// Therapist payouts relations
+export const therapistPayoutsRelations = relations(therapistPayouts, ({ one, many }) => ({
+  therapist: one(users, {
+    fields: [therapistPayouts.therapistId],
+    references: [users.id],
+  }),
+  createdByUser: one(users, {
+    fields: [therapistPayouts.createdBy],
+    references: [users.id],
+  }),
+  items: many(payoutItems),
+}));
+
+export const payoutItemsRelations = relations(payoutItems, ({ one }) => ({
+  payout: one(therapistPayouts, {
+    fields: [payoutItems.payoutId],
+    references: [therapistPayouts.id],
+  }),
+  payment: one(payments, {
+    fields: [payoutItems.paymentId],
+    references: [payments.id],
   }),
 }));

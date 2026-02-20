@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ExpenseTable } from "@/components/expenses/expense-table";
 import { ExpenseExport } from "@/components/expenses/expense-export";
 import { Suspense } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { DateRangeFilter } from "./date-range-filter";
 
 const expenseFilters = [
@@ -39,6 +40,7 @@ export default async function GastosPage({
     dateFrom?: string;
     dateTo?: string;
     page?: string;
+    search?: string;
   }>;
 }) {
   const session = await auth();
@@ -55,6 +57,7 @@ export default async function GastosPage({
         dateFrom: params.dateFrom,
         dateTo: params.dateTo,
         page,
+        search: params.search,
       }),
       getExpenseStats(),
     ]);
@@ -122,6 +125,9 @@ export default async function GastosPage({
       {/* Filters */}
       <div className="flex items-center gap-4 flex-wrap">
         <Suspense>
+          <SearchInput basePath="/gastos" />
+        </Suspense>
+        <Suspense>
           <FilterBar filters={expenseFilters} basePath="/gastos" />
         </Suspense>
         <Suspense>
@@ -139,6 +145,7 @@ export default async function GastosPage({
             if (params.category) urlParams.set("category", params.category);
             if (params.dateFrom) urlParams.set("dateFrom", params.dateFrom);
             if (params.dateTo) urlParams.set("dateTo", params.dateTo);
+            if (params.search) urlParams.set("search", params.search);
             urlParams.set("page", String(p));
             return (
               <Link

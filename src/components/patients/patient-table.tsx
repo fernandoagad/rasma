@@ -21,14 +21,24 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Eye, Pencil, Users, CalendarCheck, ClipboardList, UserMinus } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, Users, CalendarCheck, ClipboardList, UserMinus, Trash2 } from "lucide-react";
 import { UI } from "@/constants/ui";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
-import { bulkUpdatePatientStatus, bulkUpdatePatientTherapist } from "@/actions/patients";
+import { bulkUpdatePatientStatus, bulkUpdatePatientTherapist, deletePatient } from "@/actions/patients";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Patient {
   id: string;
@@ -38,6 +48,7 @@ interface Patient {
   email: string | null;
   phone: string | null;
   status: "activo" | "inactivo" | "alta";
+  type?: "fundacion" | "externo";
   primaryTherapist: { id: string; name: string } | null;
   teamCount?: number;
   activePlans?: number;
@@ -57,10 +68,11 @@ function formatShortDate(raw: string): string {
   return d.toLocaleDateString("es-CL", { day: "numeric", month: "short" });
 }
 
-export function PatientTable({ patients, therapists = [] }: { patients: Patient[]; therapists?: Therapist[] }) {
+export function PatientTable({ patients, therapists = [], userRole }: { patients: Patient[]; therapists?: Therapist[]; userRole?: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<Patient | null>(null);
 
   const allSelected = patients.length > 0 && selectedIds.size === patients.length;
   const someSelected = selectedIds.size > 0 && selectedIds.size < patients.length;
@@ -250,7 +262,12 @@ export function PatientTable({ patients, therapists = [] }: { patients: Patient[
                     <Link href={`/pacientes/${patient.id}`} className="flex items-center gap-2.5 group">
                       <AvatarInitials name={fullName} size="sm" />
                       <div className="min-w-0">
-                        <p className="font-medium text-sm group-hover:text-rasma-teal transition-colors truncate">{fullName}</p>
+                        <p className="font-medium text-sm group-hover:text-rasma-teal transition-colors truncate">
+                          {fullName}
+                          {patient.type === "externo" && (
+                            <Badge variant="info" className="ml-1.5 text-[9px] px-1 py-0">Externo</Badge>
+                          )}
+                        </p>
                         {patient.email && (
                           <p className="text-[11px] text-muted-foreground truncate">{patient.email}</p>
                         )}
@@ -318,6 +335,17 @@ export function PatientTable({ patients, therapists = [] }: { patients: Patient[
                             <Pencil className="h-4 w-4" /> Editar
                           </Link>
                         </DropdownMenuItem>
+                        {userRole === "admin" && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => setDeleteTarget(patient)}
+                              className="text-rasma-red focus:text-rasma-red cursor-pointer"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" /> {UI.common.delete}
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -327,6 +355,39 @@ export function PatientTable({ patients, therapists = [] }: { patients: Patient[
           </TableBody>
         </Table>
       </div>
+
+      {/* Delete patient confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{UI.common.confirm}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {UI.patients.confirmDelete}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{UI.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => {
+                if (!deleteTarget) return;
+                startTransition(async () => {
+                  const result = await deletePatient(deleteTarget.id);
+                  if ("success" in result) {
+                    toast.success(UI.patients.deleted);
+                    router.refresh();
+                  } else {
+                    toast.error(result.error);
+                  }
+                  setDeleteTarget(null);
+                });
+              }}
+            >
+              {UI.common.delete}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
