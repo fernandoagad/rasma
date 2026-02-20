@@ -1,16 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, ChevronRight, Calendar, Plus, X, Check } from "lucide-react";
+import { useState, useOptimistic, useTransition } from "react";
+import { ChevronDown, ChevronRight, Calendar, Plus, X, Check, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { togglePlanTask, addPlanTask, removePlanTask } from "@/actions/plans";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { togglePlanTask, addPlanTask, removePlanTask, deleteTreatmentPlan } from "@/actions/plans";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
+import Link from "next/link";
 
 interface Task {
   id: string;
@@ -43,15 +53,38 @@ export function ExpandablePlan({ plan, canEdit }: ExpandablePlanProps) {
   const [expanded, setExpanded] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [adding, setAdding] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const patientName = `${plan.patient.firstName} ${plan.patient.lastName}`;
-  const completedCount = plan.tasks.filter((t) => t.completed).length;
-  const totalTasks = plan.tasks.length;
 
-  const handleToggle = async (taskId: string) => {
-    await togglePlanTask(taskId);
-    router.refresh();
+  // Optimistic tasks state
+  const [optimisticTasks, setOptimisticTasks] = useOptimistic(
+    plan.tasks,
+    (state: Task[], update: { type: "toggle"; taskId: string } | { type: "remove"; taskId: string }) => {
+      if (update.type === "toggle") {
+        return state.map((t) =>
+          t.id === update.taskId ? { ...t, completed: !t.completed } : t
+        );
+      }
+      if (update.type === "remove") {
+        return state.filter((t) => t.id !== update.taskId);
+      }
+      return state;
+    }
+  );
+
+  const completedCount = optimisticTasks.filter((t) => t.completed).length;
+  const totalTasks = optimisticTasks.length;
+
+  const handleToggle = (taskId: string) => {
+    startTransition(async () => {
+      setOptimisticTasks({ type: "toggle", taskId });
+      await togglePlanTask(taskId);
+      router.refresh();
+    });
   };
 
   const handleAddTask = async () => {
@@ -63,9 +96,25 @@ export function ExpandablePlan({ plan, canEdit }: ExpandablePlanProps) {
     router.refresh();
   };
 
-  const handleRemoveTask = async (taskId: string) => {
-    await removePlanTask(taskId);
-    router.refresh();
+  const handleRemoveTask = (taskId: string) => {
+    startTransition(async () => {
+      setOptimisticTasks({ type: "remove", taskId });
+      await removePlanTask(taskId);
+      router.refresh();
+    });
+  };
+
+  const handleDeletePlan = async () => {
+    setDeleting(true);
+    const result = await deleteTreatmentPlan(plan.id);
+    if (result.success) {
+      toast.success("Plan eliminado");
+      router.refresh();
+    } else {
+      toast.error(result.error || "Error al eliminar plan");
+    }
+    setDeleting(false);
+    setShowDeleteDialog(false);
   };
 
   return (
@@ -114,7 +163,7 @@ export function ExpandablePlan({ plan, canEdit }: ExpandablePlanProps) {
             </div>
             {plan.nextReviewDate && (
               <div>
-                <p className="text-xs text-muted-foreground">Revisión</p>
+                <p className="text-xs text-muted-foreground">Revision</p>
                 <p className="font-medium">{plan.nextReviewDate}</p>
               </div>
             )}
@@ -140,17 +189,18 @@ export function ExpandablePlan({ plan, canEdit }: ExpandablePlanProps) {
               Tareas {totalTasks > 0 && `(${completedCount}/${totalTasks})`}
             </p>
 
-            {plan.tasks.length > 0 && (
+            {optimisticTasks.length > 0 && (
               <div className="space-y-1">
-                {plan.tasks.map((task) => (
+                {optimisticTasks.map((task) => (
                   <div
                     key={task.id}
                     className="flex items-center gap-3 py-1.5 group"
                   >
                     <button
                       onClick={() => handleToggle(task.id)}
+                      disabled={isPending}
                       className={cn(
-                        "h-5 w-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
+                        "h-5 w-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors cursor-pointer",
                         task.completed
                           ? "bg-rasma-green border-rasma-green text-white"
                           : "border-gray-300 hover:border-rasma-green"
@@ -201,8 +251,46 @@ export function ExpandablePlan({ plan, canEdit }: ExpandablePlanProps) {
               </div>
             )}
           </div>
+
+          {/* Actions: View patient + Delete */}
+          <div className="flex items-center justify-between pt-2 border-t">
+            <Link href={`/pacientes/${plan.patient.id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Ver ficha paciente
+            </Link>
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-red-600 gap-1.5 h-7 text-xs"
+                onClick={() => setShowDeleteDialog(true)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Eliminar plan
+              </Button>
+            )}
+          </div>
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar plan de tratamiento</DialogTitle>
+            <DialogDescription>
+              Se eliminara el plan y todas sus tareas asociadas para {patientName}. Esta accion no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={deleting}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDeletePlan} disabled={deleting}>
+              {deleting ? "Eliminando..." : "Eliminar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

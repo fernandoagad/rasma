@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { requireStaff } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { payments } from "@/lib/db/schema";
 import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
@@ -29,8 +29,7 @@ export async function getPayments(params?: {
   dateTo?: string;
   page?: number;
 }) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  const session = await requireStaff();
 
   if (session.user.role === "terapeuta") throw new Error("No autorizado.");
 
@@ -81,8 +80,7 @@ export async function createPayment(
   _prev: { error?: string; success?: boolean } | undefined,
   formData: FormData
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
+  const session = await requireStaff();
   if (session.user.role === "terapeuta") return { error: "No autorizado." };
 
   const parsed = paymentSchema.safeParse({
@@ -130,8 +128,7 @@ export async function createPayment(
 }
 
 export async function updatePaymentStatus(id: string, status: string) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
+  const session = await requireStaff();
   if (session.user.role === "terapeuta") return { error: "No autorizado." };
 
   await db.update(payments).set({
@@ -154,8 +151,7 @@ export async function updatePaymentStatus(id: string, status: string) {
 }
 
 export async function getPaymentStats() {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  await requireStaff();
 
   const [pendingResult, paidResult] = await Promise.all([
     db.select({ total: sql<number>`coalesce(sum(amount), 0)`, count: sql<number>`count(*)` })

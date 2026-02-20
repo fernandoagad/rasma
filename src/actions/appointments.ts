@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { requireStaff } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { appointments, patients, users } from "@/lib/db/schema";
 import { eq, and, desc, sql, gte, lte, or } from "drizzle-orm";
@@ -22,6 +22,7 @@ const appointmentSchema = z.object({
   location: z.string().optional(),
   meetingLink: z.string().optional(),
   notes: z.string().optional(),
+  price: z.coerce.number().int().min(0).optional(),
 });
 
 export async function getAppointments(params?: {
@@ -32,8 +33,7 @@ export async function getAppointments(params?: {
   dateTo?: string;
   page?: number;
 }) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  const session = await requireStaff();
 
   const page = params?.page || 1;
   const offset = (page - 1) * PAGE_SIZE;
@@ -84,8 +84,7 @@ export async function getAppointments(params?: {
 }
 
 export async function getAppointmentById(id: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  const session = await requireStaff();
 
   const appointment = await db.query.appointments.findFirst({
     where: eq(appointments.id, id),
@@ -110,8 +109,7 @@ export async function createAppointment(
   _prev: { error?: string; success?: boolean } | undefined,
   formData: FormData
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
+  const session = await requireStaff();
 
   const parsed = appointmentSchema.safeParse({
     patientId: formData.get("patientId") || undefined,
@@ -124,6 +122,7 @@ export async function createAppointment(
     location: formData.get("location") || undefined,
     meetingLink: formData.get("meetingLink") || undefined,
     notes: formData.get("notes") || undefined,
+    price: formData.get("price") ? Number(formData.get("price")) : undefined,
   });
 
   if (!parsed.success) {
@@ -166,6 +165,7 @@ export async function createAppointment(
   const [appt] = await db.insert(appointments).values({
     ...parsed.data,
     dateTime: new Date(parsed.data.dateTime),
+    price: parsed.data.price ?? null,
     meetingLink,
     googleEventId,
     createdBy: session.user.id,
@@ -192,8 +192,7 @@ export async function updateAppointment(
   _prev: { error?: string; success?: boolean } | undefined,
   formData: FormData
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
+  const session = await requireStaff();
 
   const parsed = appointmentSchema.partial().safeParse({
     patientId: formData.get("patientId") || undefined,
@@ -258,8 +257,7 @@ export async function updateAppointment(
 }
 
 export async function updateAppointmentStatus(id: string, status: string) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
+  const session = await requireStaff();
 
   await db.update(appointments).set({
     status: status as "programada" | "completada" | "cancelada" | "no_asistio",
@@ -282,8 +280,7 @@ export async function updateAppointmentStatus(id: string, status: string) {
 }
 
 export async function getTherapists() {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  await requireStaff();
 
   return db.query.users.findMany({
     where: and(
@@ -295,8 +292,7 @@ export async function getTherapists() {
 }
 
 export async function getPatientsList() {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  await requireStaff();
 
   return db.query.patients.findMany({
     where: eq(patients.status, "activo"),
@@ -307,8 +303,7 @@ export async function getPatientsList() {
 
 // Cancel all future appointments in a recurring group
 export async function cancelRecurringGroup(groupId: string, cancelFutureOnly = true) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
+  const session = await requireStaff();
 
   const conditions = [eq(appointments.recurringGroupId, groupId)];
 
@@ -347,8 +342,7 @@ export async function cancelRecurringGroup(groupId: string, cancelFutureOnly = t
 
 // Get all appointments in a recurring group
 export async function getRecurringGroupAppointments(groupId: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  await requireStaff();
 
   return db.query.appointments.findMany({
     where: eq(appointments.recurringGroupId, groupId),
@@ -373,8 +367,7 @@ export async function createRecurringAppointments(data: {
   recurrenceWeeks: number; // e.g., 8 for 8 weekly appointments
   addMeetLink?: boolean;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
+  const session = await requireStaff();
 
   const groupId = crypto.randomUUID();
   const startDate = new Date(data.startDateTime);

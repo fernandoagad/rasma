@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Table,
@@ -14,17 +15,20 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Eye, Pencil, Users, CalendarCheck, ClipboardList } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, Users, CalendarCheck, ClipboardList, UserMinus } from "lucide-react";
 import { UI } from "@/constants/ui";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
+import { bulkUpdatePatientStatus, bulkUpdatePatientTherapist } from "@/actions/patients";
+import { toast } from "sonner";
 
 interface Patient {
   id: string;
@@ -41,12 +45,21 @@ interface Patient {
   completedSessions?: number;
 }
 
+interface Therapist {
+  id: string;
+  name: string;
+  specialty: string | null;
+  image: string | null;
+}
+
 function formatShortDate(raw: string): string {
   const d = new Date(raw);
   return d.toLocaleDateString("es-CL", { day: "numeric", month: "short" });
 }
 
-export function PatientTable({ patients }: { patients: Patient[] }) {
+export function PatientTable({ patients, therapists = [] }: { patients: Patient[]; therapists?: Therapist[] }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const allSelected = patients.length > 0 && selectedIds.size === patients.length;
@@ -69,6 +82,38 @@ export function PatientTable({ patients }: { patients: Patient[] }) {
     });
   };
 
+  const handleBulkStatus = (status: string) => {
+    startTransition(async () => {
+      const result = await bulkUpdatePatientStatus(
+        Array.from(selectedIds),
+        status as "activo" | "inactivo" | "alta"
+      );
+      if ("success" in result) {
+        toast.success(`${result.count} ${UI.bulk.bulkSuccess}`);
+        setSelectedIds(new Set());
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
+    });
+  };
+
+  const handleBulkTherapist = (therapistId: string | null) => {
+    startTransition(async () => {
+      const result = await bulkUpdatePatientTherapist(
+        Array.from(selectedIds),
+        therapistId
+      );
+      if ("success" in result) {
+        toast.success(`${result.count} ${UI.bulk.bulkSuccess}`);
+        setSelectedIds(new Set());
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
+    });
+  };
+
   if (patients.length === 0) {
     return (
       <EmptyState
@@ -85,10 +130,53 @@ export function PatientTable({ patients }: { patients: Patient[] }) {
     <div className="space-y-3">
       {/* Bulk actions bar */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 rounded-xl border border-rasma-teal/30 bg-rasma-teal/5 px-4 py-2.5">
+        <div className="flex items-center gap-3 rounded-xl border border-rasma-teal/30 bg-rasma-teal/5 px-4 py-2.5 flex-wrap">
           <span className="text-sm font-medium">
             {selectedIds.size} {UI.bulk.selected}
           </span>
+          <div className="flex items-center gap-2 ml-auto">
+            {/* Status dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" disabled={isPending}>
+                  {UI.bulk.changeStatus}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {Object.entries(UI.patients.statuses).map(([key, label]) => (
+                  <DropdownMenuItem key={key} onClick={() => handleBulkStatus(key)}>
+                    {label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Therapist dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" disabled={isPending}>
+                  {UI.bulk.assignTherapist}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-64 overflow-y-auto">
+                <DropdownMenuItem onClick={() => handleBulkTherapist(null)}>
+                  <UserMinus className="h-4 w-4 mr-2 text-muted-foreground" />
+                  {UI.bulk.noTherapist}
+                </DropdownMenuItem>
+                {therapists.length > 0 && <DropdownMenuSeparator />}
+                {therapists.map((t) => (
+                  <DropdownMenuItem key={t.id} onClick={() => handleBulkTherapist(t.id)}>
+                    {t.name}
+                    {t.specialty && <span className="ml-1 text-xs text-muted-foreground">({t.specialty})</span>}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} disabled={isPending}>
+              {UI.bulk.deselect}
+            </Button>
+          </div>
         </div>
       )}
 

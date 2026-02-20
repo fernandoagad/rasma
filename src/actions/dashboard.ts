@@ -1,13 +1,12 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { requireStaff } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { patients, appointments, payments, sessionNotes, auditLog, users } from "@/lib/db/schema";
 import { eq, and, sql, gte, lte, isNull, desc, or } from "drizzle-orm";
 
 export async function getDashboardStats() {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  const session = await requireStaff();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -87,8 +86,7 @@ export async function getDashboardStats() {
 }
 
 export async function getRecentActivity(limit = 10) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  const session = await requireStaff();
 
   const conditions = [];
   if (session.user.role === "terapeuta") {
@@ -115,8 +113,7 @@ export async function getRecentActivity(limit = 10) {
 }
 
 export async function getUpcomingAppointments(limit = 8) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  const session = await requireStaff();
 
   const now = new Date();
   const conditions = [
@@ -149,8 +146,7 @@ export async function getUpcomingAppointments(limit = 8) {
 }
 
 export async function getTodayAppointments() {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  const session = await requireStaff();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);

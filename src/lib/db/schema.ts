@@ -22,10 +22,11 @@ export const users = sqliteTable(
     image: text("image"),
     passwordHash: text("password_hash"), // Nullable: Google OAuth users won't have one
     role: text("role", {
-      enum: ["admin", "terapeuta", "recepcionista", "supervisor"],
+      enum: ["admin", "terapeuta", "recepcionista", "supervisor", "rrhh", "paciente", "invitado"],
     })
       .notNull()
-      .default("recepcionista"),
+      .default("invitado"),
+    linkedPatientId: text("linked_patient_id"), // Links patient-role users to their patient record
     active: integer("active", { mode: "boolean" }).notNull().default(true),
     specialty: text("specialty"), // "Psiquiatra Adulto", "Psicóloga Infantil", etc.
     area: text("area"), // "Clínica", "Salud Mental", "Neurodesarrollo", etc.
@@ -251,6 +252,7 @@ export const appointments = sqliteTable(
     notes: text("notes"),
     recurringGroupId: text("recurring_group_id"),
     recurringRule: text("recurring_rule"), // JSON RRULE-like pattern
+    price: integer("price"), // Price in CLP (Chilean pesos), null = not set
     googleEventId: text("google_event_id"), // Linked Google Calendar event
     createdBy: text("created_by").references(() => users.id),
     createdAt: integer("created_at", { mode: "timestamp" })
@@ -484,6 +486,10 @@ export const systemSettings = sqliteTable("system_settings", {
 
 export const usersRelations = relations(users, ({ one, many }) => ({
   googleToken: one(googleTokens),
+  linkedPatient: one(patients, {
+    fields: [users.linkedPatientId],
+    references: [patients.id],
+  }),
   patients: many(patients),
   appointments: many(appointments),
   sessionNotes: many(sessionNotes),
@@ -491,6 +497,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   inAppNotifications: many(inAppNotifications),
   presence: one(userPresence),
   careTeamMemberships: many(careTeamMembers),
+  sentDMs: many(directMessages, { relationName: "dmSender" }),
+  receivedDMs: many(directMessages, { relationName: "dmRecipient" }),
 }));
 
 export const googleTokensRelations = relations(googleTokens, ({ one }) => ({
@@ -723,6 +731,35 @@ export const careTeamMessageReads = sqliteTable(
 );
 
 // ============================================================
+// DIRECT MESSAGES (staff-to-staff DMs)
+// ============================================================
+
+export const directMessages = sqliteTable(
+  "direct_messages",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    senderId: text("sender_id")
+      .notNull()
+      .references(() => users.id),
+    recipientId: text("recipient_id")
+      .notNull()
+      .references(() => users.id),
+    content: text("content").notNull(),
+    readAt: integer("read_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("dm_sender_idx").on(table.senderId),
+    index("dm_recipient_idx").on(table.recipientId),
+    index("dm_created_idx").on(table.createdAt),
+  ]
+);
+
+// ============================================================
 // PATIENT FILES (Google Drive integration)
 // ============================================================
 
@@ -771,6 +808,7 @@ export const patientFiles = sqliteTable(
     })
       .notNull()
       .default("general"),
+    label: text("label"), // Free-text tag: "Informe TEA", "Evaluación Cognitiva", etc.
     uploadedBy: text("uploaded_by")
       .notNull()
       .references(() => users.id),
@@ -849,6 +887,19 @@ export const careTeamMessageReadsRelations = relations(
   })
 );
 
+export const directMessagesRelations = relations(directMessages, ({ one }) => ({
+  sender: one(users, {
+    fields: [directMessages.senderId],
+    references: [users.id],
+    relationName: "dmSender",
+  }),
+  recipient: one(users, {
+    fields: [directMessages.recipientId],
+    references: [users.id],
+    relationName: "dmRecipient",
+  }),
+}));
+
 export const patientFoldersRelations = relations(patientFolders, ({ one }) => ({
   patient: one(patients, {
     fields: [patientFolders.patientId],
@@ -871,6 +922,296 @@ export const patientFilesRelations = relations(patientFiles, ({ one }) => ({
   }),
   uploader: one(users, {
     fields: [patientFiles.uploadedBy],
+    references: [users.id],
+  }),
+}));
+
+// ============================================================
+// APPLICANT TRACKING TABLES
+// ============================================================
+
+export const applicants = sqliteTable(
+  "applicants",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone").notNull(),
+    positions: text("positions").notNull(), // JSON array: ["Psicólogo/a Infantil", ...]
+    status: text("status", {
+      enum: ["nuevo", "en_revision", "entrevista", "aceptado", "rechazado", "en_espera"],
+    })
+      .notNull()
+      .default("nuevo"),
+    assignedTo: text("assigned_to").references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("applicant_status_idx").on(table.status),
+    index("applicant_email_idx").on(table.email),
+    index("applicant_created_idx").on(table.createdAt),
+  ]
+);
+
+export const applicantFiles = sqliteTable(
+  "applicant_files",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    applicantId: text("applicant_id")
+      .notNull()
+      .references(() => applicants.id, { onDelete: "cascade" }),
+    driveFileId: text("drive_file_id").notNull(),
+    fileName: text("file_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    fileSize: integer("file_size"),
+    driveViewLink: text("drive_view_link"),
+    driveDownloadLink: text("drive_download_link"),
+    uploadedAt: integer("uploaded_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [index("afile_applicant_idx").on(table.applicantId)]
+);
+
+export const applicantNotes = sqliteTable(
+  "applicant_notes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    applicantId: text("applicant_id")
+      .notNull()
+      .references(() => applicants.id, { onDelete: "cascade" }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => users.id),
+    content: text("content").notNull(),
+    type: text("type", {
+      enum: ["nota", "email_enviado", "estado_cambiado"],
+    })
+      .notNull()
+      .default("nota"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("anote_applicant_idx").on(table.applicantId),
+    index("anote_created_idx").on(table.createdAt),
+  ]
+);
+
+// ============================================================
+// STAFF MANAGEMENT TABLES (HR module)
+// ============================================================
+
+/** Documents stored per staff member (CV, contracts, certifications, etc.) */
+export const staffDocuments = sqliteTable(
+  "staff_documents",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    driveFileId: text("drive_file_id").notNull(),
+    fileName: text("file_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    fileSize: integer("file_size"),
+    category: text("category", {
+      enum: ["cv", "contrato", "certificacion", "evaluacion", "otro"],
+    })
+      .notNull()
+      .default("otro"),
+    label: text("label"),
+    driveViewLink: text("drive_view_link"),
+    driveDownloadLink: text("drive_download_link"),
+    uploadedBy: text("uploaded_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("sdoc_user_idx").on(table.userId),
+    index("sdoc_category_idx").on(table.category),
+  ]
+);
+
+/** Position history per staff member */
+export const positionHistory = sqliteTable(
+  "position_history",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(), // "Psicóloga Infantil", "Coordinadora Clínica"
+    department: text("department"), // "Clínica", "Administración"
+    startDate: text("start_date").notNull(), // ISO date
+    endDate: text("end_date"), // null = current
+    notes: text("notes"),
+    createdBy: text("created_by").references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("poshist_user_idx").on(table.userId),
+  ]
+);
+
+/** Salary history per staff member */
+export const salaryHistory = sqliteTable(
+  "salary_history",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    amount: integer("amount").notNull(), // Monthly gross in CLP
+    currency: text("currency").notNull().default("CLP"),
+    effectiveDate: text("effective_date").notNull(), // ISO date
+    reason: text("reason"), // "Aumento anual", "Cambio de cargo"
+    createdBy: text("created_by").references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("salhist_user_idx").on(table.userId),
+  ]
+);
+
+/** Performance evaluations */
+export const performanceEvaluations = sqliteTable(
+  "performance_evaluations",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    evaluatorId: text("evaluator_id")
+      .notNull()
+      .references(() => users.id),
+    period: text("period").notNull(), // "2025-Q4", "2026-Q1"
+    score: integer("score"), // 1-5
+    strengths: text("strengths"),
+    areasToImprove: text("areas_to_improve"),
+    goals: text("goals"),
+    comments: text("comments"),
+    status: text("status", {
+      enum: ["borrador", "completada", "revisada"],
+    })
+      .notNull()
+      .default("borrador"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("perfeval_user_idx").on(table.userId),
+    index("perfeval_period_idx").on(table.period),
+  ]
+);
+
+/** Staff benefits */
+export const staffBenefits = sqliteTable(
+  "staff_benefits",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type", {
+      enum: ["salud", "transporte", "alimentacion", "capacitacion", "otro"],
+    })
+      .notNull(),
+    description: text("description").notNull(),
+    amount: integer("amount"), // CLP if applicable
+    startDate: text("start_date").notNull(),
+    endDate: text("end_date"),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
+    createdBy: text("created_by").references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("sbenefit_user_idx").on(table.userId),
+    index("sbenefit_type_idx").on(table.type),
+  ]
+);
+
+// Staff management relations
+export const staffDocumentsRelations = relations(staffDocuments, ({ one }) => ({
+  user: one(users, { fields: [staffDocuments.userId], references: [users.id] }),
+  uploader: one(users, { fields: [staffDocuments.uploadedBy], references: [users.id] }),
+}));
+
+export const positionHistoryRelations = relations(positionHistory, ({ one }) => ({
+  user: one(users, { fields: [positionHistory.userId], references: [users.id] }),
+}));
+
+export const salaryHistoryRelations = relations(salaryHistory, ({ one }) => ({
+  user: one(users, { fields: [salaryHistory.userId], references: [users.id] }),
+}));
+
+export const performanceEvaluationsRelations = relations(performanceEvaluations, ({ one }) => ({
+  user: one(users, { fields: [performanceEvaluations.userId], references: [users.id] }),
+  evaluator: one(users, { fields: [performanceEvaluations.evaluatorId], references: [users.id] }),
+}));
+
+export const staffBenefitsRelations = relations(staffBenefits, ({ one }) => ({
+  user: one(users, { fields: [staffBenefits.userId], references: [users.id] }),
+}));
+
+// Applicant relations
+export const applicantsRelations = relations(applicants, ({ many, one }) => ({
+  files: many(applicantFiles),
+  notes: many(applicantNotes),
+  assignedUser: one(users, {
+    fields: [applicants.assignedTo],
+    references: [users.id],
+  }),
+}));
+
+export const applicantFilesRelations = relations(applicantFiles, ({ one }) => ({
+  applicant: one(applicants, {
+    fields: [applicantFiles.applicantId],
+    references: [applicants.id],
+  }),
+}));
+
+export const applicantNotesRelations = relations(applicantNotes, ({ one }) => ({
+  applicant: one(applicants, {
+    fields: [applicantNotes.applicantId],
+    references: [applicants.id],
+  }),
+  author: one(users, {
+    fields: [applicantNotes.authorId],
     references: [users.id],
   }),
 }));

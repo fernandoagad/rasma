@@ -3,8 +3,10 @@
 import { useEffect } from "react";
 import { heartbeat } from "@/actions/presence";
 
-export function usePresence() {
+export function usePresence(enabled = true) {
   useEffect(() => {
+    if (!enabled) return;
+
     // Initial heartbeat
     heartbeat().catch(() => {});
 
@@ -14,5 +16,5 @@ export function usePresence() {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [enabled]);
 }

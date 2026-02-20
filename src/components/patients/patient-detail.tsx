@@ -35,6 +35,7 @@ import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { PatientDocumentsTab } from "@/components/patients/patient-documents-tab";
+import { AssignedProfessionals } from "@/components/patients/assigned-professionals";
 
 function InfoRow({
   label,
@@ -113,14 +114,17 @@ interface PatientSummary {
   completedSessions: number;
   pendingNotes: number;
   teamCount: number;
+  lastSession: { id: string; dateTime: Date; therapistName: string } | null;
 }
 
 interface PatientFile {
   id: string;
+  driveFileId: string;
   fileName: string;
   mimeType: string;
   fileSize: number | null;
   category: string;
+  label: string | null;
   driveViewLink: string | null;
   driveDownloadLink: string | null;
   uploadedBy: string;
@@ -252,7 +256,7 @@ export function PatientDetail({ patient, userRole, appointments = [], payments =
 
       {/* Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           <SummaryCard
             label="Plan activo"
             value={summary.activePlans > 0 ? `${summary.activePlans}` : "—"}
@@ -268,6 +272,15 @@ export function PatientDetail({ patient, userRole, appointments = [], payments =
             sub={summary.nextAppointment?.therapistName}
             color={summary.nextAppointment ? "text-blue-600" : "text-muted-foreground"}
             icon={<Calendar className="h-3.5 w-3.5" />}
+          />
+          <SummaryCard
+            label="Última sesión"
+            value={summary.lastSession
+              ? new Date(summary.lastSession.dateTime).toLocaleDateString("es-CL", { day: "numeric", month: "short" })
+              : "—"}
+            sub={summary.lastSession?.therapistName}
+            color={summary.lastSession ? "text-orange-600" : "text-muted-foreground"}
+            icon={<Clock className="h-3.5 w-3.5" />}
           />
           <SummaryCard
             label="Sesiones"
@@ -389,6 +402,8 @@ export function PatientDetail({ patient, userRole, appointments = [], payments =
               <CardContent><p className="whitespace-pre-wrap text-sm">{patient.notes}</p></CardContent>
             </Card>
           )}
+
+          <AssignedProfessionals patientId={patient.id} />
         </TabsContent>
 
         {/* Appointments tab */}

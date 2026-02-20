@@ -2,11 +2,12 @@
 
 import { useActionState } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { UI } from "@/constants/ui";
 import { toast } from "sonner";
+import { addCareTeamMember } from "@/actions/care-teams";
 
 interface Therapist {
   id: string;
@@ -67,14 +69,37 @@ export function PatientForm({
 }: PatientFormProps) {
   const [state, formAction, isPending] = useActionState(action, undefined);
   const router = useRouter();
+  const [teamMembers, setTeamMembers] = useState<Set<string>>(new Set());
+
+  const toggleTeamMember = (id: string) => {
+    setTeamMembers((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (state?.success) {
-      toast.success(isEdit ? UI.patients.updated : UI.patients.created);
-      router.push(state.id ? `/pacientes/${state.id}` : "/pacientes");
-      router.refresh();
+      // If creating a new patient and team members selected, assign them
+      if (!isEdit && state.id && teamMembers.size > 0) {
+        Promise.all(
+          Array.from(teamMembers).map((userId) =>
+            addCareTeamMember(state.id!, userId)
+          )
+        ).then(() => {
+          toast.success(UI.patients.created);
+          router.push(`/pacientes/${state.id}`);
+          router.refresh();
+        });
+      } else {
+        toast.success(isEdit ? UI.patients.updated : UI.patients.created);
+        router.push(state.id ? `/pacientes/${state.id}` : "/pacientes");
+        router.refresh();
+      }
     }
-  }, [state, isEdit, router]);
+  }, [state, isEdit, router, teamMembers]);
 
   return (
     <form action={formAction} className="space-y-6">
@@ -293,6 +318,39 @@ export function PatientForm({
           </div>
         </CardContent>
       </Card>
+
+      {/* Care Team Assignment (only on create) */}
+      {!isEdit && therapists.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Equipo de Atención</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Seleccione los profesionales que formarán parte del equipo de atención de este paciente
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {therapists.map((t) => (
+                <label
+                  key={t.id}
+                  className="flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors"
+                >
+                  <Checkbox
+                    checked={teamMembers.has(t.id)}
+                    onCheckedChange={() => toggleTeamMember(t.id)}
+                  />
+                  <span className="text-sm">{t.name}</span>
+                </label>
+              ))}
+            </div>
+            {teamMembers.size > 0 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                {teamMembers.size} profesional(es) seleccionado(s)
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Actions */}
       <div className="flex justify-end gap-3">

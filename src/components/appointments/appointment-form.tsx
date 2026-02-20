@@ -600,11 +600,36 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
         </CardContent>
       </Card>
 
-      {/* Step 5: Notes */}
+      {/* Step 5: Price */}
       <Card>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
             <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">5</div>
+            <h3 className="font-semibold text-sm">Valor de la sesion (opcional)</h3>
+          </div>
+          <div className="max-w-xs">
+            <Label className="text-xs text-muted-foreground mb-1.5">Precio en CLP</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+              <Input
+                name="price"
+                type="number"
+                min="0"
+                step="1000"
+                placeholder="Ej: 35000"
+                className="pl-7"
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">Se usara para generar el cobro correspondiente</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Step 6: Notes */}
+      <Card>
+        <CardContent>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">6</div>
             <h3 className="font-semibold text-sm">Notas (opcional)</h3>
           </div>
           <Textarea

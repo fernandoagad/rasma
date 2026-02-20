@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -11,10 +11,7 @@ import { sendWelcomeEmail, sendAdminPasswordResetEmail } from "@/lib/email";
 import { revalidatePath } from "next/cache";
 
 export async function getUsers(params?: { area?: string; status?: string }) {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
-    throw new Error("No autorizado.");
-  }
+  const session = await requireRole(["admin"]);
 
   const conditions = [];
   if (params?.area && params.area !== "all") {
@@ -54,10 +51,7 @@ export async function createUser(
   _prevState: { error?: string; success?: boolean } | undefined,
   formData: FormData
 ) {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
-    return { error: "No autorizado." };
-  }
+  const session = await requireRole(["admin"]);
 
   const parsed = createUserSchema.safeParse({
     name: formData.get("name"),
@@ -123,10 +117,7 @@ export async function updateUser(
   _prevState: { error?: string; success?: boolean } | undefined,
   formData: FormData
 ) {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
-    return { error: "No autorizado." };
-  }
+  const session = await requireRole(["admin"]);
 
   const parsed = updateUserSchema.safeParse({
     name: formData.get("name"),
@@ -179,10 +170,7 @@ export async function updateUser(
 }
 
 export async function adminResetPassword(userId: string) {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
-    return { error: "No autorizado." };
-  }
+  const session = await requireRole(["admin"]);
 
   // Generate a temporary password
   const tempPassword = crypto.randomUUID().slice(0, 12);
@@ -216,16 +204,13 @@ export async function adminResetPassword(userId: string) {
 export async function bulkUpdateUsers(
   userIds: string[],
   updates: {
-    role?: "admin" | "terapeuta" | "recepcionista" | "supervisor";
+    role?: "admin" | "terapeuta" | "recepcionista" | "supervisor" | "rrhh" | "paciente" | "invitado";
     area?: string;
     therapistStatus?: "evaluando" | "disponible" | "completo";
     active?: boolean;
   }
 ) {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "admin") {
-    return { error: "No autorizado." };
-  }
+  const session = await requireRole(["admin"]);
 
   if (userIds.length === 0) return { error: "No se seleccionaron usuarios." };
 

@@ -34,6 +34,11 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/login");
 
   const role = session.user.role;
+
+  // Redirect non-staff roles to their appropriate pages
+  if (role === "paciente") redirect("/mis-citas");
+  if (role === "invitado") redirect("/pendiente");
+
   const firstName = session.user.name?.split(" ")[0] || "usuario";
 
   const [stats, activities, upcoming, todayAppts] = await Promise.all([

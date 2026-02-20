@@ -1,17 +1,18 @@
 import { getReportData } from "@/actions/reports";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { BarChart3, Users, Calendar, DollarSign, TrendingUp, UserCheck } from "lucide-react";
+import { BarChart3, Users, Calendar, DollarSign, TrendingUp, UserPlus, Share2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { TherapistDetailTable } from "@/components/reports/therapist-detail-table";
 
 const sessionTypeLabels: Record<string, string> = {
   individual: "Individual",
   pareja: "Pareja",
   familiar: "Familiar",
   grupal: "Grupal",
-  evaluacion: "Evaluación",
+  evaluacion: "Evaluacion",
 };
 
 export default async function ReportesPage({
@@ -21,7 +22,7 @@ export default async function ReportesPage({
 }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
-  if (!["admin", "supervisor"].includes(session.user.role)) redirect("/");
+  if (!["admin", "supervisor", "rrhh"].includes(session.user.role)) redirect("/");
 
   const params = await searchParams;
   const data = await getReportData({ dateFrom: params.dateFrom, dateTo: params.dateTo });
@@ -61,11 +62,15 @@ export default async function ReportesPage({
     },
   ];
 
+  const maxReferralCount = data.referralSources.length > 0
+    ? Math.max(...data.referralSources.map(r => r.count))
+    : 1;
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <PageHeader
         title="Reportes"
-        subtitle={`Período: ${new Date(data.dateFrom).toLocaleDateString("es-CL")} — ${new Date(data.dateTo).toLocaleDateString("es-CL")}`}
+        subtitle={`Periodo: ${new Date(data.dateFrom).toLocaleDateString("es-CL")} — ${new Date(data.dateTo).toLocaleDateString("es-CL")}`}
       />
 
       {/* Date filters */}
@@ -105,45 +110,73 @@ export default async function ReportesPage({
         ))}
       </div>
 
-      {/* Therapist workload */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <UserCheck className="h-5 w-5" /> Carga por Terapeuta
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {data.therapistStats.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin datos para este período.</p>
-          ) : (
-            <div className="space-y-3">
-              {data.therapistStats.map((t) => (
-                <div key={t.therapistId} className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{t.therapistName}</span>
-                  <div className="flex items-center gap-3">
-                    <div className="w-48 bg-muted rounded-full h-2.5">
-                      <div className="bg-rasma-teal h-2.5 rounded-full transition-all"
-                        style={{ width: `${Math.min((t.appointmentCount / Math.max(...data.therapistStats.map(s => s.appointmentCount))) * 100, 100)}%` }} />
-                    </div>
-                    <span className="text-sm font-bold w-8 text-right">{t.appointmentCount}</span>
-                  </div>
-                </div>
-              ))}
+      {/* Detailed therapist stats table */}
+      <TherapistDetailTable therapists={data.therapistDetailStats} />
+
+      {/* Patient flow & Referral sources side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Patient flow */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <UserPlus className="h-5 w-5" /> Flujo de Pacientes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="text-center p-4 bg-rasma-teal/5 rounded-lg">
+                <p className="text-3xl font-bold text-rasma-teal">{data.patientFlow.newPatients}</p>
+                <p className="text-sm text-muted-foreground mt-1">Nuevos en periodo</p>
+              </div>
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <p className="text-3xl font-bold text-blue-600">{data.patientFlow.totalActive}</p>
+                <p className="text-sm text-muted-foreground mt-1">Total activos</p>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Top referral sources */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Share2 className="h-5 w-5" /> Fuentes de Referencia
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.referralSources.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin datos de referencia.</p>
+            ) : (
+              <div className="space-y-2">
+                {data.referralSources.map((r) => (
+                  <div key={r.source} className="flex items-center gap-3">
+                    <span className="text-sm w-32 truncate shrink-0" title={r.source}>{r.source}</span>
+                    <div className="flex-1 bg-muted rounded-full h-5 relative overflow-hidden">
+                      <div
+                        className="bg-rasma-teal h-5 rounded-full transition-all flex items-center justify-end pr-2"
+                        style={{ width: `${Math.max((r.count / maxReferralCount) * 100, 8)}%` }}
+                      >
+                        <span className="text-xs font-medium text-white">{r.count}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Session type breakdown */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" /> Tipos de Sesión
+            <BarChart3 className="h-5 w-5" /> Tipos de Sesion
           </CardTitle>
         </CardHeader>
         <CardContent>
           {data.sessionTypeStats.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin datos para este período.</p>
+            <p className="text-sm text-muted-foreground">Sin datos para este periodo.</p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               {data.sessionTypeStats.map((s) => (

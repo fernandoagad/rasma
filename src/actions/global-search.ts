@@ -1,25 +1,25 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { requireStaff } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { patients, users, appointments } from "@/lib/db/schema";
-import { or, like, desc, gte, eq } from "drizzle-orm";
+import { or, like, desc, gte, eq, sql } from "drizzle-orm";
 
 export async function globalSearch(query: string) {
-  const session = await auth();
-  if (!session?.user) return { patients: [], professionals: [], appointments: [] };
+  await requireStaff();
   if (!query || query.length < 2) return { patients: [], professionals: [], appointments: [] };
 
   const q = `%${query}%`;
 
   const [patientResults, professionalResults, appointmentResults] = await Promise.all([
-    // Search patients by name, RUT, email
+    // Search patients by name, RUT, email (including full name)
     db.query.patients.findMany({
       where: or(
         like(patients.firstName, q),
         like(patients.lastName, q),
         like(patients.rut, q),
-        like(patients.email, q)
+        like(patients.email, q),
+        sql`(${patients.firstName} || ' ' || ${patients.lastName}) LIKE ${q}`,
       ),
       columns: { id: true, firstName: true, lastName: true, rut: true, status: true },
       limit: 5,

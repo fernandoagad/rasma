@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import { isStaff } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { userPresence, users } from "@/lib/db/schema";
 import { eq, gte } from "drizzle-orm";
@@ -8,6 +9,7 @@ import { eq, gte } from "drizzle-orm";
 export async function heartbeat() {
   const session = await auth();
   if (!session?.user) return;
+  if (!isStaff(session.user.role)) return;
 
   const now = new Date();
 

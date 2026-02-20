@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import { db } from "@/lib/db";
-import { googleTokens, patientFolders, patientFiles } from "@/lib/db/schema";
+import { googleTokens, patientFolders, patientFiles, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { Readable } from "stream";
 
@@ -12,37 +12,65 @@ function getOAuth2Client() {
   );
 }
 
-async function getAuthenticatedClient(userId: string) {
-  const tokens = await db.query.googleTokens.findFirst({
-    where: eq(googleTokens.userId, userId),
+/**
+ * Gets the Google OAuth client using the admin account (contacto@rasma.cl).
+ * All Drive operations use a single shared account so files are centralized.
+ * Falls back to GMAIL_REFRESH_TOKEN env var if no DB tokens found.
+ */
+async function getAuthenticatedClient() {
+  // Try DB tokens first: admin user (contacto@rasma.cl)
+  const adminUser = await db.query.users.findFirst({
+    where: eq(users.email, "contacto@rasma.cl"),
+    columns: { id: true },
   });
 
+  const adminId = adminUser?.id;
+  let tokens = adminId
+    ? await db.query.googleTokens.findFirst({ where: eq(googleTokens.userId, adminId) })
+    : null;
+
+  // Fallback: use any available Google tokens from DB
   if (!tokens) {
-    throw new Error("No se encontraron credenciales de Google. Inicie sesión con Google para habilitar archivos.");
+    tokens = await db.query.googleTokens.findFirst();
   }
 
   const oauth2Client = getOAuth2Client();
-  oauth2Client.setCredentials({
-    access_token: tokens.accessToken,
-    refresh_token: tokens.refreshToken,
-    expiry_date: tokens.expiresAt?.getTime(),
-  });
 
-  oauth2Client.on("tokens", async (newTokens) => {
-    await db
-      .update(googleTokens)
-      .set({
-        accessToken: newTokens.access_token || tokens.accessToken,
-        refreshToken: newTokens.refresh_token || tokens.refreshToken,
-        expiresAt: newTokens.expiry_date
-          ? new Date(newTokens.expiry_date)
-          : tokens.expiresAt,
-        updatedAt: new Date(),
-      })
-      .where(eq(googleTokens.userId, userId));
-  });
+  if (tokens) {
+    const tokenUserId = tokens.userId;
+    oauth2Client.setCredentials({
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
+      expiry_date: tokens.expiresAt?.getTime(),
+    });
 
-  return oauth2Client;
+    oauth2Client.on("tokens", async (newTokens) => {
+      await db
+        .update(googleTokens)
+        .set({
+          accessToken: newTokens.access_token || tokens!.accessToken,
+          refreshToken: newTokens.refresh_token || tokens!.refreshToken,
+          expiresAt: newTokens.expiry_date
+            ? new Date(newTokens.expiry_date)
+            : tokens!.expiresAt,
+          updatedAt: new Date(),
+        })
+        .where(eq(googleTokens.userId, tokenUserId));
+    });
+
+    return oauth2Client;
+  }
+
+  // Final fallback: use GMAIL_REFRESH_TOKEN env var (same token used for emails)
+  const envRefreshToken = process.env.GMAIL_REFRESH_TOKEN;
+  if (envRefreshToken) {
+    oauth2Client.setCredentials({
+      refresh_token: envRefreshToken,
+    });
+    return oauth2Client;
+  }
+
+  throw new Error("No se encontraron credenciales de Google. Configure la cuenta de Google desde Configuracion.");
 }
 
 /**
@@ -60,7 +88,7 @@ export async function getOrCreatePatientFolder(
     return { folderId: existing.id, driveFolderId: existing.driveFolderId };
   }
 
-  const auth = await getAuthenticatedClient(userId);
+  const auth = await getAuthenticatedClient();
   const drive = google.drive({ version: "v3", auth });
 
   const folderName = `RASMA - ${patientName}`;
@@ -107,7 +135,7 @@ export async function uploadFileToDrive(
     patientName
   );
 
-  const auth = await getAuthenticatedClient(userId);
+  const auth = await getAuthenticatedClient();
   const drive = google.drive({ version: "v3", auth });
 
   const stream = Readable.from(file.buffer);
@@ -121,7 +149,16 @@ export async function uploadFileToDrive(
       mimeType: file.mimeType,
       body: stream,
     },
-    fields: "id,webViewLink,webContentLink",
+    fields: "id,webViewLink,webContentLink,thumbnailLink",
+  });
+
+  // Make file viewable by anyone with the link (needed for iframe preview)
+  await drive.permissions.create({
+    fileId: driveFile.data.id!,
+    requestBody: {
+      role: "reader",
+      type: "anyone",
+    },
   });
 
   const [dbFile] = await db
@@ -159,7 +196,7 @@ export async function deleteFileFromDrive(
   });
   if (!file) throw new Error("Archivo no encontrado.");
 
-  const auth = await getAuthenticatedClient(userId);
+  const auth = await getAuthenticatedClient();
   const drive = google.drive({ version: "v3", auth });
 
   try {
@@ -170,4 +207,197 @@ export async function deleteFileFromDrive(
   }
 
   await db.delete(patientFiles).where(eq(patientFiles.id, fileId));
+}
+
+/**
+ * Delete a file from Google Drive by its Drive file ID (no DB cleanup).
+ */
+export async function deleteFileFromDriveById(driveFileId: string): Promise<void> {
+  const auth = await getAuthenticatedClient();
+  const drive = google.drive({ version: "v3", auth });
+  try {
+    await drive.files.delete({ fileId: driveFileId });
+  } catch (err: unknown) {
+    const error = err as { code?: number };
+    if (error?.code !== 404) throw err;
+  }
+}
+
+/**
+ * Rename a file on Google Drive.
+ */
+export async function renameFileOnDrive(driveFileId: string, newName: string): Promise<void> {
+  const auth = await getAuthenticatedClient();
+  const drive = google.drive({ version: "v3", auth });
+  await drive.files.update({
+    fileId: driveFileId,
+    requestBody: { name: newName },
+  });
+}
+
+/**
+ * Upload a staff member's document (CV, contract, etc.) to Google Drive.
+ * Stored under "RASMA - Equipo/{staffName}" folder.
+ */
+export async function uploadStaffFile(
+  staffName: string,
+  file: {
+    buffer: Buffer;
+    fileName: string;
+    mimeType: string;
+    size: number;
+  }
+) {
+  const auth = await getAuthenticatedClient();
+  const drive = google.drive({ version: "v3", auth });
+
+  // Get or create "RASMA - Equipo" root folder
+  const rootFolderName = "RASMA - Equipo";
+  const rootSearch = await drive.files.list({
+    q: `name='${rootFolderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    fields: "files(id)",
+    spaces: "drive",
+  });
+
+  let rootFolderId: string;
+  if (rootSearch.data.files?.length) {
+    rootFolderId = rootSearch.data.files[0].id!;
+  } else {
+    const rootFolder = await drive.files.create({
+      requestBody: {
+        name: rootFolderName,
+        mimeType: "application/vnd.google-apps.folder",
+      },
+      fields: "id",
+    });
+    rootFolderId = rootFolder.data.id!;
+  }
+
+  // Get or create staff member subfolder
+  const subSearch = await drive.files.list({
+    q: `name='${staffName}' and '${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    fields: "files(id)",
+    spaces: "drive",
+  });
+
+  let subFolderId: string;
+  if (subSearch.data.files?.length) {
+    subFolderId = subSearch.data.files[0].id!;
+  } else {
+    const subFolder = await drive.files.create({
+      requestBody: {
+        name: staffName,
+        mimeType: "application/vnd.google-apps.folder",
+        parents: [rootFolderId],
+      },
+      fields: "id",
+    });
+    subFolderId = subFolder.data.id!;
+  }
+
+  // Upload file
+  const stream = Readable.from(file.buffer);
+  const driveFile = await drive.files.create({
+    requestBody: {
+      name: file.fileName,
+      parents: [subFolderId],
+    },
+    media: {
+      mimeType: file.mimeType,
+      body: stream,
+    },
+    fields: "id,webViewLink,webContentLink",
+  });
+
+  await drive.permissions.create({
+    fileId: driveFile.data.id!,
+    requestBody: { role: "reader", type: "anyone" },
+  });
+
+  return {
+    driveFileId: driveFile.data.id!,
+    viewLink: driveFile.data.webViewLink || null,
+    downloadLink: driveFile.data.webContentLink || null,
+  };
+}
+
+/**
+ * Upload an applicant's file (CV/cover letter) to Google Drive.
+ * Stored under "RASMA - Postulaciones/{applicantName}" folder.
+ */
+export async function uploadApplicantFile(
+  applicantId: string,
+  applicantName: string,
+  file: {
+    buffer: Buffer;
+    fileName: string;
+    mimeType: string;
+    size: number;
+  }
+) {
+  const auth = await getAuthenticatedClient();
+  const drive = google.drive({ version: "v3", auth });
+
+  // Get or create "RASMA - Postulaciones" root folder
+  const rootFolderName = "RASMA - Postulaciones";
+  const rootSearch = await drive.files.list({
+    q: `name='${rootFolderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    fields: "files(id)",
+    spaces: "drive",
+  });
+
+  let rootFolderId: string;
+  if (rootSearch.data.files?.length) {
+    rootFolderId = rootSearch.data.files[0].id!;
+  } else {
+    const rootFolder = await drive.files.create({
+      requestBody: {
+        name: rootFolderName,
+        mimeType: "application/vnd.google-apps.folder",
+      },
+      fields: "id",
+    });
+    rootFolderId = rootFolder.data.id!;
+  }
+
+  // Create applicant subfolder
+  const subFolderName = applicantName;
+  const subFolder = await drive.files.create({
+    requestBody: {
+      name: subFolderName,
+      mimeType: "application/vnd.google-apps.folder",
+      parents: [rootFolderId],
+    },
+    fields: "id",
+  });
+  const subFolderId = subFolder.data.id!;
+
+  // Upload file
+  const stream = Readable.from(file.buffer);
+  const driveFile = await drive.files.create({
+    requestBody: {
+      name: file.fileName,
+      parents: [subFolderId],
+    },
+    media: {
+      mimeType: file.mimeType,
+      body: stream,
+    },
+    fields: "id,webViewLink,webContentLink",
+  });
+
+  // Make viewable by anyone with the link
+  await drive.permissions.create({
+    fileId: driveFile.data.id!,
+    requestBody: {
+      role: "reader",
+      type: "anyone",
+    },
+  });
+
+  return {
+    driveFileId: driveFile.data.id!,
+    viewLink: driveFile.data.webViewLink || null,
+    downloadLink: driveFile.data.webContentLink || null,
+  };
 }

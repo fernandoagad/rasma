@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { requireRole, CLINICAL_ROLES } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { treatmentPlans, treatmentPlanTasks, patients, users } from "@/lib/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -26,9 +26,7 @@ export async function getTreatmentPlans(params?: {
   patientId?: string;
   page?: number;
 }) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
-  if (session.user.role === "recepcionista") throw new Error("No autorizado.");
+  const session = await requireRole(CLINICAL_ROLES);
 
   const page = params?.page || 1;
   const offset = (page - 1) * PAGE_SIZE;
@@ -75,9 +73,7 @@ export async function createTreatmentPlan(
   _prev: { error?: string; success?: boolean } | undefined,
   formData: FormData
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
-  if (!["admin", "terapeuta"].includes(session.user.role)) return { error: "No autorizado." };
+  const session = await requireRole(CLINICAL_ROLES);
 
   const parsed = planSchema.safeParse({
     patientId: formData.get("patientId"),
@@ -135,8 +131,7 @@ export async function updateTreatmentPlan(
   _prev: { error?: string; success?: boolean } | undefined,
   formData: FormData
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
+  const session = await requireRole(CLINICAL_ROLES);
 
   const existing = await db.query.treatmentPlans.findFirst({
     where: eq(treatmentPlans.id, id),
@@ -190,13 +185,38 @@ export async function updateTreatmentPlan(
   return { success: true };
 }
 
+export async function deleteTreatmentPlan(id: string) {
+  const session = await requireRole(CLINICAL_ROLES);
+
+  const existing = await db.query.treatmentPlans.findFirst({
+    where: eq(treatmentPlans.id, id),
+  });
+  if (!existing) return { error: "Plan no encontrado." };
+
+  if (session.user.role === "terapeuta" && existing.therapistId !== session.user.id) {
+    return { error: "No autorizado." };
+  }
+
+  // Tasks are cascade-deleted by the DB schema
+  await db.delete(treatmentPlans).where(eq(treatmentPlans.id, id));
+
+  await logAudit({
+    userId: session.user.id,
+    action: "delete",
+    entityType: "treatment_plan",
+    entityId: id,
+  });
+
+  revalidatePath("/planes");
+  return { success: true };
+}
+
 // ============================================================
 // PLAN TASK ACTIONS
 // ============================================================
 
 export async function togglePlanTask(taskId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
+  await requireRole(CLINICAL_ROLES);
 
   const task = await db.query.treatmentPlanTasks.findFirst({
     where: eq(treatmentPlanTasks.id, taskId),
@@ -213,8 +233,7 @@ export async function togglePlanTask(taskId: string) {
 }
 
 export async function addPlanTask(planId: string, title: string, optional = false) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
+  await requireRole(CLINICAL_ROLES);
   if (!title.trim()) return { error: "El título es obligatorio." };
 
   const existing = await db
@@ -236,8 +255,7 @@ export async function addPlanTask(planId: string, title: string, optional = fals
 }
 
 export async function removePlanTask(taskId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
+  await requireRole(CLINICAL_ROLES);
 
   await db.delete(treatmentPlanTasks).where(eq(treatmentPlanTasks.id, taskId));
 

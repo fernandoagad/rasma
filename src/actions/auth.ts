@@ -2,7 +2,7 @@
 
 import { signIn, signOut } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { users, passwordResetTokens } from "@/lib/db/schema";
+import { users, passwordResetTokens, patients } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { randomBytes, createHash } from "crypto";
@@ -12,7 +12,7 @@ import {
   resetPasswordSchema,
   registerSchema,
 } from "@/lib/validations/auth";
-import { sendPasswordResetCode, sendPasswordChangedNotification } from "@/lib/email";
+import { sendPasswordResetCode, sendPasswordChangedNotification, sendRegistrationWelcome, sendLoginAlert } from "@/lib/email";
 import { logAudit } from "@/lib/audit";
 import { AuthError } from "next-auth";
 
@@ -98,13 +98,112 @@ export async function registerAction(
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
 
-  await db.insert(users).values({
+  // Try to auto-link to an existing patient record by email
+  const matchingPatient = await db.query.patients.findFirst({
+    where: eq(patients.email, normalizedEmail),
+    columns: { id: true },
+  });
+
+  const [newUser] = await db.insert(users).values({
     name: parsed.data.name.trim(),
     email: normalizedEmail,
     passwordHash,
-    role: "recepcionista",
+    role: "paciente",
     authProvider: "credentials",
+    linkedPatientId: matchingPatient?.id || null,
+  }).returning({ id: users.id });
+
+  // Generate email verification code
+  const code = generateCode();
+  const codeHash = hashToken(code);
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+  await db.insert(passwordResetTokens).values({
+    userId: newUser.id,
+    tokenHash: codeHash,
+    expiresAt,
   });
+
+  await sendRegistrationWelcome(normalizedEmail, parsed.data.name.trim(), code);
+
+  return { success: true, email: normalizedEmail };
+}
+
+// ── Email verification after registration ──
+
+export async function verifyRegistrationEmail(email: string, code: string) {
+  if (!code || code.length !== 6) {
+    return { error: "Ingrese el codigo de 6 digitos." };
+  }
+
+  const normalizedEmail = email.toLowerCase();
+  const codeHash = hashToken(code);
+
+  const user = await db.query.users.findFirst({
+    where: eq(users.email, normalizedEmail),
+    columns: { id: true, emailVerifiedAt: true },
+  });
+
+  if (!user) {
+    return { error: "Codigo invalido o expirado." };
+  }
+
+  if (user.emailVerifiedAt) {
+    return { success: true };
+  }
+
+  const tokenRecord = await db.query.passwordResetTokens.findFirst({
+    where: and(
+      eq(passwordResetTokens.userId, user.id),
+      eq(passwordResetTokens.tokenHash, codeHash),
+      isNull(passwordResetTokens.usedAt)
+    ),
+  });
+
+  if (!tokenRecord) {
+    return { error: "Codigo invalido o expirado." };
+  }
+
+  if (tokenRecord.expiresAt < new Date()) {
+    return { error: "El codigo ha expirado. Solicite uno nuevo." };
+  }
+
+  await db
+    .update(users)
+    .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
+    .where(eq(users.id, user.id));
+
+  await db
+    .update(passwordResetTokens)
+    .set({ usedAt: new Date() })
+    .where(eq(passwordResetTokens.id, tokenRecord.id));
+
+  return { success: true };
+}
+
+export async function resendVerificationCode(email: string) {
+  const normalizedEmail = email.toLowerCase();
+
+  const user = await db.query.users.findFirst({
+    where: eq(users.email, normalizedEmail),
+    columns: { id: true, name: true, emailVerifiedAt: true },
+  });
+
+  if (!user || user.emailVerifiedAt) {
+    return { success: true };
+  }
+
+  const code = generateCode();
+  const codeHash = hashToken(code);
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+  await db.insert(passwordResetTokens).values({
+    userId: user.id,
+    tokenHash: codeHash,
+    expiresAt,
+  });
+
+  await sendRegistrationWelcome(normalizedEmail, user.name, code);
 
   return { success: true };
 }

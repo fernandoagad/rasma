@@ -1,5 +1,5 @@
-import { getTherapists, createPatient } from "@/actions/patients";
-import { PatientForm } from "@/components/patients/patient-form";
+import { getTherapists, searchExistingPatients } from "@/actions/patients";
+import { PatientSearchOrCreate } from "@/components/patients/patient-search-or-create";
 import { UI } from "@/constants/ui";
 
 export default async function NuevoPacientePage() {
@@ -8,7 +8,10 @@ export default async function NuevoPacientePage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold">{UI.patients.newPatient}</h1>
-      <PatientForm therapists={therapists} action={createPatient} />
+      <PatientSearchOrCreate
+        therapists={therapists}
+        searchPatients={searchExistingPatients}
+      />
     </div>
   );
 }

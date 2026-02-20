@@ -1,15 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { registerAction, googleSignInAction } from "@/actions/auth";
+import { registerAction, googleSignInAction, verifyRegistrationEmail, resendVerificationCode } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { UI } from "@/constants/ui";
 import Link from "next/link";
+import { ArrowLeft, Mail, CheckCircle, Loader2 } from "lucide-react";
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -24,14 +25,123 @@ function GoogleIcon({ className }: { className?: string }) {
 
 export function RegisterForm() {
   const [state, formAction, isPending] = useActionState(registerAction, undefined);
+  const [step, setStep] = useState<"form" | "verify" | "done">("form");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [verifyError, setVerifyError] = useState("");
+  const [isVerifying, startTransition] = useTransition();
   const router = useRouter();
 
   useEffect(() => {
-    if (state?.success) {
-      router.push("/login?registered=true");
+    if (state?.success && state?.email) {
+      setEmail(state.email);
+      setStep("verify");
     }
-  }, [state?.success, router]);
+  }, [state?.success, state?.email]);
 
+  function handleVerifyCode(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setVerifyError("");
+    startTransition(async () => {
+      const result = await verifyRegistrationEmail(email, code);
+      if (result.error) {
+        setVerifyError(result.error);
+      } else {
+        setStep("done");
+      }
+    });
+  }
+
+  function handleResendCode() {
+    setVerifyError("");
+    startTransition(async () => {
+      await resendVerificationCode(email);
+    });
+  }
+
+  // ── Step: Verify email ──
+  if (step === "verify") {
+    return (
+      <div>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center justify-center h-10 w-10 rounded-full bg-blue-50 text-blue-600 shrink-0">
+            <Mail className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-rasma-dark">Verifique su correo</h2>
+            <p className="text-sm text-muted-foreground">Enviamos un codigo de 6 digitos a <span className="font-medium text-rasma-dark">{email}</span></p>
+          </div>
+        </div>
+
+        <form onSubmit={handleVerifyCode} className="space-y-4">
+          {verifyError && (
+            <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+              {verifyError}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="code">Codigo de verificacion</Label>
+            <Input
+              id="code"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              placeholder="000000"
+              required
+              autoComplete="one-time-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              className="text-center text-2xl tracking-[0.5em] font-mono"
+            />
+          </div>
+          <Button
+            type="submit"
+            disabled={isVerifying || code.length !== 6}
+            className="w-full bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90 font-semibold"
+          >
+            {isVerifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isVerifying ? "Verificando..." : "Verificar correo"}
+          </Button>
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={handleResendCode}
+              disabled={isVerifying}
+              className="text-sm text-rasma-teal hover:text-rasma-teal/80 transition-colors"
+            >
+              Reenviar codigo
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  // ── Step: Done ──
+  if (step === "done") {
+    return (
+      <div className="text-center space-y-4">
+        <div className="flex justify-center">
+          <div className="flex items-center justify-center h-14 w-14 rounded-full bg-green-50 text-green-600">
+            <CheckCircle className="h-7 w-7" />
+          </div>
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-rasma-dark">Cuenta creada exitosamente</h2>
+          <p className="text-sm text-muted-foreground mt-1">Su correo ha sido verificado. Ya puede iniciar sesion.</p>
+        </div>
+        <Link
+          href="/login"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-rasma-teal hover:text-rasma-teal/80 transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Ir a iniciar sesion
+        </Link>
+      </div>
+    );
+  }
+
+  // ── Step: Registration form ──
   return (
     <div className="space-y-4">
       {/* Google Sign In */}

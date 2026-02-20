@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { db } from "@/lib/db";
-import { users, googleTokens, loginAttempts } from "@/lib/db/schema";
+import { users, googleTokens, loginAttempts, patients } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { loginSchema } from "@/lib/validations/auth";
@@ -78,6 +78,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           email: user.email,
           role: user.role,
+          linkedPatientId: user.linkedPatientId || null,
         };
       },
     }),
@@ -139,7 +140,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               .where(eq(users.id, dbUser.id));
           }
         } else {
-          // New user via Google — auto-create as recepcionista (admin can upgrade role later)
+          // New user via Google — auto-create as invitado (admin can upgrade role later)
+          // Try to auto-link to an existing patient record by email
+          const matchingPatient = await db.query.patients.findFirst({
+            where: eq(patients.email, email),
+            columns: { id: true },
+          });
+
           const [newUser] = await db
             .insert(users)
             .values({
@@ -147,12 +154,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               email,
               image: user.image || null,
               authProvider: "google",
-              role: "recepcionista",
+              role: matchingPatient ? "paciente" : "invitado",
+              linkedPatientId: matchingPatient?.id || null,
               emailVerifiedAt: new Date(),
             })
             .returning({ id: users.id });
 
-          dbUser = { ...newUser, role: "recepcionista" as const } as NonNullable<typeof dbUser>;
+          dbUser = { ...newUser, role: (matchingPatient ? "paciente" : "invitado") as "paciente" | "invitado" } as NonNullable<typeof dbUser>;
 
           if (account.access_token) {
             await db.insert(googleTokens).values({
@@ -168,18 +176,50 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
         }
 
-        // Attach role to the user object for JWT callback
+        // Attach role + linkedPatientId to the user object for JWT callback
         user.id = dbUser!.id;
         user.role = dbUser!.role;
+        user.linkedPatientId = (dbUser as { linkedPatientId?: string | null }).linkedPatientId || null;
+
+        // Send login security alert (non-blocking, dynamic import to avoid edge runtime issues)
+        if (dbUser!.email) {
+          import("@/lib/email").then(({ sendLoginAlert }) => {
+            sendLoginAlert(dbUser!.email!, dbUser!.name || "Usuario", "google").catch(() => {});
+          }).catch(() => {});
+        }
+      }
+
+      // Send login alert for credentials login
+      if (account?.provider === "credentials" && user.email) {
+        import("@/lib/email").then(({ sendLoginAlert }) => {
+          sendLoginAlert(user.email!, user.name || "Usuario", "credentials").catch(() => {});
+        }).catch(() => {});
       }
 
       return true;
     },
 
-    jwt({ token, user, account }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.role = user.role;
         token.id = user.id;
+        token.linkedPatientId = user.linkedPatientId;
+      }
+      // Refresh role from DB on every token refresh so admin changes take effect
+      if (token.id) {
+        try {
+          const dbUser = await db.query.users.findFirst({
+            where: eq(users.id, token.id as string),
+            columns: { role: true, linkedPatientId: true, active: true },
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+            token.linkedPatientId = dbUser.linkedPatientId;
+            if (!dbUser.active) return null as unknown as typeof token;
+          }
+        } catch {
+          // Silent fail — use cached token values
+        }
       }
       // Pass Google access token through to session if needed
       if (account?.provider === "google" && account.access_token) {
@@ -192,6 +232,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.role = token.role as string;
         session.user.id = token.id as string;
+        session.user.linkedPatientId = (token.linkedPatientId as string) || null;
       }
       return session;
     },

@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Users, Shield, Database, Bell } from "lucide-react";
+import { Users, Shield, Database, Bell, Mail } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -35,6 +35,12 @@ export default async function ConfiguracionPage() {
       icon: Bell,
       title: "Notificaciones",
       description: "Configurar recordatorios por email y WhatsApp",
+    },
+    {
+      href: "/configuracion/plantillas",
+      icon: Mail,
+      title: "Plantillas de Email",
+      description: "Ver y personalizar los correos automáticos del sistema",
     },
   ];
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getOnlineUsers } from "@/actions/presence";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
+import { MessageCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -19,16 +20,30 @@ export function OnlineAvatars({ onChatOpen }: { onChatOpen?: () => void }) {
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchUsers = async () => {
       const users = await getOnlineUsers();
       setOnlineUsers(users);
     };
-    fetch();
-    const interval = setInterval(fetch, 30000);
+    fetchUsers();
+    const interval = setInterval(fetchUsers, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  if (onlineUsers.length === 0) return null;
+  if (onlineUsers.length === 0) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={onChatOpen}
+            className="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors outline-none"
+          >
+            <MessageCircle className="h-4 w-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Chat del equipo</TooltipContent>
+      </Tooltip>
+    );
+  }
 
   return (
     <Tooltip>
@@ -55,6 +70,11 @@ export function OnlineAvatars({ onChatOpen }: { onChatOpen?: () => void }) {
               <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-green-500 ring-1 ring-background" />
             </div>
           ))}
+          {onlineUsers.length > 3 && (
+            <div className="flex items-center justify-center h-7 w-7 rounded-full ring-2 ring-background bg-muted text-[10px] font-medium text-muted-foreground">
+              +{onlineUsers.length - 3}
+            </div>
+          )}
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom">

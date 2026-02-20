@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { requireRole, CLINICAL_ROLES } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { sessionNotes, appointments } from "@/lib/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -23,10 +23,7 @@ export async function getSessionNotes(params?: {
   therapistId?: string;
   page?: number;
 }) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
-
-  if (session.user.role === "recepcionista") throw new Error("No autorizado.");
+  const session = await requireRole(CLINICAL_ROLES);
 
   const page = params?.page || 1;
   const offset = (page - 1) * PAGE_SIZE;
@@ -68,9 +65,7 @@ export async function getSessionNotes(params?: {
 }
 
 export async function getSessionNoteById(id: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
-  if (session.user.role === "recepcionista") throw new Error("No autorizado.");
+  const session = await requireRole(CLINICAL_ROLES);
 
   const note = await db.query.sessionNotes.findFirst({
     where: eq(sessionNotes.id, id),
@@ -99,9 +94,7 @@ export async function createSessionNote(
   _prev: { error?: string; success?: boolean } | undefined,
   formData: FormData
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
-  if (!["admin", "terapeuta"].includes(session.user.role)) return { error: "No autorizado." };
+  const session = await requireRole(CLINICAL_ROLES);
 
   const parsed = noteSchema.safeParse({
     appointmentId: formData.get("appointmentId"),
@@ -146,8 +139,7 @@ export async function updateSessionNote(
   _prev: { error?: string; success?: boolean } | undefined,
   formData: FormData
 ) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
+  const session = await requireRole(CLINICAL_ROLES);
 
   const existing = await db.query.sessionNotes.findFirst({
     where: eq(sessionNotes.id, id),
@@ -185,9 +177,33 @@ export async function updateSessionNote(
   return { success: true };
 }
 
+export async function deleteSessionNote(id: string) {
+  const session = await requireRole(CLINICAL_ROLES);
+
+  const existing = await db.query.sessionNotes.findFirst({
+    where: eq(sessionNotes.id, id),
+  });
+
+  if (!existing) return { error: "Nota no encontrada." };
+  if (session.user.role === "terapeuta" && existing.therapistId !== session.user.id) {
+    return { error: "No autorizado." };
+  }
+
+  await db.delete(sessionNotes).where(eq(sessionNotes.id, id));
+
+  await logAudit({
+    userId: session.user.id,
+    action: "delete",
+    entityType: "session_note",
+    entityId: id,
+  });
+
+  revalidatePath("/notas");
+  return { success: true };
+}
+
 export async function getCompletedAppointmentsWithoutNotes() {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  const session = await requireRole(CLINICAL_ROLES);
 
   const therapistFilter = session.user.role === "terapeuta"
     ? eq(appointments.therapistId, session.user.id)

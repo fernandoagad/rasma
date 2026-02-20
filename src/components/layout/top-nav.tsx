@@ -13,6 +13,7 @@ import {
   FileText,
   ClipboardList,
   BarChart3,
+  Briefcase,
   Settings,
   UserCog,
   Menu,
@@ -21,6 +22,7 @@ import {
   MoreVertical,
   ChevronDown,
   Search,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UI } from "@/constants/ui";
@@ -60,8 +62,10 @@ const navItems = [
   { href: "/notas", label: UI.nav.notes, icon: FileText, roles: ["admin", "terapeuta", "supervisor"] },
   { href: "/planes", label: UI.nav.plans, icon: ClipboardList, roles: ["admin", "terapeuta", "supervisor"] },
   { href: "/reportes", label: UI.nav.reports, icon: BarChart3, roles: ["admin", "supervisor"] },
+  { href: "/rrhh", label: UI.nav.rrhh, icon: Briefcase, roles: ["admin", "rrhh"] },
   { href: "/configuracion/usuarios", label: UI.nav.users, icon: UserCog, roles: ["admin"] },
   { href: "/configuracion", label: UI.nav.settings, icon: Settings, roles: ["admin"] },
+  { href: "/mis-citas", label: UI.nav.myAppointments, icon: Calendar, roles: ["paciente"] },
 ];
 
 interface TopNavProps {
@@ -73,11 +77,16 @@ interface TopNavProps {
   };
 }
 
+function isNavActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  // Exact match for /configuracion so it doesn't match /configuracion/usuarios
+  if (href === "/configuracion") return pathname === "/configuracion";
+  return pathname.startsWith(href);
+}
+
 function getPageTitle(pathname: string): string {
   if (pathname === "/") return UI.nav.dashboard;
-  const match = navItems.find((item) =>
-    item.href === "/" ? false : pathname.startsWith(item.href)
-  );
+  const match = navItems.find((item) => isNavActive(pathname, item.href));
   return match?.label ?? "";
 }
 
@@ -88,8 +97,9 @@ export function TopNav({ role, user }: TopNavProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
 
-  // Keep presence alive
-  usePresence();
+  // Keep presence alive (only for staff)
+  const isStaffRole = !["paciente", "invitado"].includes(role);
+  usePresence(isStaffRole);
 
   const visibleItems = navItems.filter((item) => item.roles.includes(role));
   const pageTitle = getPageTitle(pathname);
@@ -116,7 +126,7 @@ export function TopNav({ role, user }: TopNavProps) {
                 </SheetTitle>
                 <nav className="p-3 space-y-0.5">
                   {visibleItems.map((item) => {
-                    const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                    const isActive = isNavActive(pathname, item.href);
                     return (
                       <Link
                         key={item.href}
@@ -141,7 +151,7 @@ export function TopNav({ role, user }: TopNavProps) {
             {/* Desktop nav icons */}
             <nav className="hidden lg:flex items-center gap-0.5">
               {visibleItems.map((item) => {
-                const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                const isActive = isNavActive(pathname, item.href);
                 return (
                   <Tooltip key={item.href}>
                     <TooltipTrigger asChild>
@@ -181,7 +191,7 @@ export function TopNav({ role, user }: TopNavProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="center" className="w-52">
                   {visibleItems.map((item) => {
-                    const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                    const isActive = isNavActive(pathname, item.href);
                     return (
                       <DropdownMenuItem key={item.href} asChild>
                         <Link
@@ -207,21 +217,40 @@ export function TopNav({ role, user }: TopNavProps) {
 
           {/* ── RIGHT: Online avatars + Search + Bell + Avatar + menu ── */}
           <div className="flex items-center gap-1 shrink-0">
-            {/* Online user avatars — click to open chat */}
-            <OnlineAvatars onChatOpen={() => setChatOpen(true)} />
+            {/* Online user avatars — only for staff */}
+            {isStaffRole && (
+              <OnlineAvatars onChatOpen={() => setChatOpen(true)} />
+            )}
 
-            {/* Search icon */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => setSearchOpen(true)}
-                  className="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors outline-none"
-                >
-                  <Search className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Buscar (Ctrl+K)</TooltipContent>
-            </Tooltip>
+            {/* Search icon — only for staff */}
+            {isStaffRole && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setSearchOpen(true)}
+                    className="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors outline-none"
+                  >
+                    <Search className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Buscar (Ctrl+K)</TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Chat icon for patients (simple, no online avatars) */}
+            {role === "paciente" && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setChatOpen(true)}
+                    className="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors outline-none"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Mensajes</TooltipContent>
+              </Tooltip>
+            )}
 
             {/* Notification bell */}
             <NotificationBell />
@@ -268,8 +297,10 @@ export function TopNav({ role, user }: TopNavProps) {
       {/* Global search dialog */}
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
 
-      {/* Chat panel */}
-      <ChatPanel open={chatOpen} onOpenChange={setChatOpen} />
+      {/* Chat panel — hidden for invitado */}
+      {role !== "invitado" && (
+        <ChatPanel open={chatOpen} onOpenChange={setChatOpen} userRole={role} />
+      )}
     </>
   );
 }

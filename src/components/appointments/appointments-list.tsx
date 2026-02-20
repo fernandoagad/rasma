@@ -15,6 +15,7 @@ import {
   FileText,
   CreditCard,
   Eye,
+  User,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -144,19 +145,19 @@ export function AppointmentsList({ appointments, totalPages, currentPage, filter
                       <div className="flex items-stretch">
                         {/* Left time strip */}
                         <div className={cn(
-                          "flex flex-col items-center justify-center w-20 shrink-0 border-r py-4",
+                          "flex flex-col items-center justify-center w-[100px] shrink-0 border-r py-3",
                           appt.status === "completada" && "bg-green-50",
                           appt.status === "programada" && "bg-blue-50",
                           appt.status === "cancelada" && "bg-red-50",
                           appt.status === "no_asistio" && "bg-yellow-50",
                         )}>
-                          <p className="text-lg font-bold text-rasma-dark leading-none">
-                            {dt.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
+                          <p className="text-base font-bold text-rasma-dark leading-none">
+                            {dt.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })}
                           </p>
-                          <p className="text-[10px] text-muted-foreground mt-1">
-                            {endTime.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
+                          <p className="text-[10px] text-muted-foreground mt-1.5">
+                            {endTime.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })}
                           </p>
-                          <p className="text-[10px] text-muted-foreground mt-1">
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
                             {appt.durationMinutes} min
                           </p>
                         </div>
@@ -167,8 +168,9 @@ export function AppointmentsList({ appointments, totalPages, currentPage, filter
                             <AvatarInitials name={patientName} size="sm" />
                             <div className="min-w-0">
                               <Link
-                                href={`/citas/${appt.id}`}
+                                href={`/pacientes/${appt.patient.id}`}
                                 className="text-sm font-semibold hover:underline truncate block"
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 {patientName}
                               </Link>
@@ -219,6 +221,11 @@ export function AppointmentsList({ appointments, totalPages, currentPage, filter
                                 <DropdownMenuItem asChild>
                                   <Link href={`/citas/${appt.id}`} className="cursor-pointer">
                                     <Eye className="mr-2 h-4 w-4" /> Ver detalle
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/pacientes/${appt.patient.id}`} className="cursor-pointer">
+                                    <User className="mr-2 h-4 w-4" /> Ver paciente
                                   </Link>
                                 </DropdownMenuItem>
 

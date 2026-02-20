@@ -212,7 +212,7 @@ export function NoteForm({ appointments, preselectedId }: Props) {
                     name={section.key}
                     rows={4}
                     placeholder={section.placeholder}
-                    className="resize-none border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none text-sm"
+                    className="resize-none border-0 bg-muted/30 p-3 focus-visible:ring-0 shadow-none text-sm placeholder:text-muted-foreground/40"
                   />
                 </div>
               );

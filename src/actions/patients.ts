@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import { requireStaff } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { patients, users, careTeamMembers, appointments, treatmentPlans } from "@/lib/db/schema";
 import { eq, and, or, like, isNull, desc, sql, inArray, gte } from "drizzle-orm";
@@ -15,8 +15,7 @@ export async function getPatients(params?: {
   status?: string;
   page?: number;
 }) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  const session = await requireStaff();
 
   const page = params?.page || 1;
   const offset = (page - 1) * PAGE_SIZE;
@@ -64,7 +63,8 @@ export async function getPatients(params?: {
         like(patients.firstName, searchTerm),
         like(patients.lastName, searchTerm),
         like(patients.rut, searchTerm),
-        like(patients.email, searchTerm)
+        like(patients.email, searchTerm),
+        sql`(${patients.firstName} || ' ' || ${patients.lastName}) LIKE ${searchTerm}`,
       )!
     );
   }
@@ -166,8 +166,7 @@ export async function getPatientsEnriched(params?: {
 }
 
 export async function getPatientById(id: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  const session = await requireStaff();
 
   const patient = await db.query.patients.findFirst({
     where: and(eq(patients.id, id), isNull(patients.deletedAt)),
@@ -185,10 +184,7 @@ export async function createPatient(
   _prevState: { error?: string; success?: boolean } | undefined,
   formData: FormData
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return { error: "No autorizado." };
-  }
+  const session = await requireStaff();
 
   const raw = Object.fromEntries(formData);
   const parsed = patientFormSchema.safeParse(raw);
@@ -239,10 +235,7 @@ export async function updatePatient(
   _prevState: { error?: string; success?: boolean } | undefined,
   formData: FormData
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return { error: "No autorizado." };
-  }
+  const session = await requireStaff();
 
   const raw = Object.fromEntries(formData);
   const parsed = patientFormSchema.safeParse(raw);
@@ -291,10 +284,7 @@ export async function updatePatient(
 }
 
 export async function deletePatient(id: string) {
-  const session = await auth();
-  if (!session?.user) {
-    return { error: "No autorizado." };
-  }
+  const session = await requireStaff();
 
   // Only admin and terapeuta can delete
   if (!["admin", "terapeuta"].includes(session.user.role)) {
@@ -318,9 +308,39 @@ export async function deletePatient(id: string) {
   return { success: true };
 }
 
+export async function searchExistingPatients(query: string) {
+  await requireStaff();
+  if (!query || query.length < 2) return [];
+
+  const q = `%${query}%`;
+  return db.query.patients.findMany({
+    where: and(
+      isNull(patients.deletedAt),
+      or(
+        like(patients.firstName, q),
+        like(patients.lastName, q),
+        like(patients.rut, q),
+        like(patients.email, q),
+        sql`(${patients.firstName} || ' ' || ${patients.lastName}) LIKE ${q}`,
+      )
+    ),
+    with: {
+      primaryTherapist: { columns: { id: true, name: true } },
+    },
+    columns: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      rut: true,
+      email: true,
+      status: true,
+    },
+    limit: 10,
+  });
+}
+
 export async function getTherapists() {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  await requireStaff();
 
   return db.query.users.findMany({
     where: and(
@@ -330,4 +350,62 @@ export async function getTherapists() {
     columns: { id: true, name: true, specialty: true, image: true },
     orderBy: (users, { asc }) => [asc(users.name)],
   });
+}
+
+// ============================================================
+// Bulk actions
+// ============================================================
+
+export async function bulkUpdatePatientStatus(
+  patientIds: string[],
+  status: "activo" | "inactivo" | "alta"
+) {
+  const session = await requireStaff();
+  if (!["admin", "supervisor", "terapeuta"].includes(session.user.role)) return { error: "No tiene permisos." };
+  if (patientIds.length === 0) return { error: "Sin pacientes seleccionados." };
+  if (!["activo", "inactivo", "alta"].includes(status)) return { error: "Estado inválido." };
+
+  await db.update(patients)
+    .set({ status, updatedAt: new Date() })
+    .where(and(inArray(patients.id, patientIds), isNull(patients.deletedAt)));
+
+  await logAudit({
+    userId: session.user.id,
+    action: "update",
+    entityType: "patient",
+    details: { bulkStatusChange: status, count: patientIds.length },
+  });
+
+  revalidatePath("/pacientes");
+  return { success: true, count: patientIds.length };
+}
+
+export async function bulkUpdatePatientTherapist(
+  patientIds: string[],
+  therapistId: string | null
+) {
+  const session = await requireStaff();
+  if (!["admin", "supervisor", "terapeuta"].includes(session.user.role)) return { error: "No tiene permisos." };
+  if (patientIds.length === 0) return { error: "Sin pacientes seleccionados." };
+
+  if (therapistId) {
+    const therapist = await db.query.users.findFirst({
+      where: and(eq(users.id, therapistId), eq(users.role, "terapeuta"), eq(users.active, true)),
+    });
+    if (!therapist) return { error: "Terapeuta no encontrado." };
+  }
+
+  await db.update(patients)
+    .set({ primaryTherapistId: therapistId, updatedAt: new Date() })
+    .where(and(inArray(patients.id, patientIds), isNull(patients.deletedAt)));
+
+  await logAudit({
+    userId: session.user.id,
+    action: "update",
+    entityType: "patient",
+    details: { bulkTherapistChange: therapistId, count: patientIds.length },
+  });
+
+  revalidatePath("/pacientes");
+  return { success: true, count: patientIds.length };
 }

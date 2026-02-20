@@ -8,6 +8,9 @@
 import { google } from "googleapis";
 import http from "http";
 
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
 const REDIRECT_URI = "http://localhost:3000/api/auth/callback/google";
@@ -21,6 +24,9 @@ const authUrl = oauth2Client.generateAuthUrl({
     "https://www.googleapis.com/auth/gmail.send",
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/drive.file",
   ],
 });
 
@@ -28,7 +34,7 @@ const authUrl = oauth2Client.generateAuthUrl({
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url!, `http://localhost:3000`);
 
-  if (url.pathname === "/api/auth/callback/google") {
+  if (url.pathname === "/" || url.pathname === "/api/auth/callback/google") {
     const code = url.searchParams.get("code");
 
     if (code) {
@@ -77,7 +83,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(3000, () => {
-  console.log("\n=== Gmail OAuth Token Generator ===\n");
+  console.log("\n=== Google OAuth Token Generator (Gmail + Calendar + Drive) ===\n");
   console.log("Temporary server running on port 3000.\n");
   console.log("Open this URL in your browser (sign in as contacto@rasma.cl):\n");
   console.log(authUrl);

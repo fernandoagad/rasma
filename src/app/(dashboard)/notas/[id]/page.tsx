@@ -2,7 +2,9 @@ import { getSessionNoteById } from "@/actions/notes";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Calendar, User, Shield } from "lucide-react";
+import { ArrowLeft, Calendar, User, Shield, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { NoteDeleteButton } from "@/components/notes/note-delete-button";
 
 export default async function NoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -12,11 +14,13 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const note = await getSessionNoteById(id);
 
+  const canEdit = session.user.role === "admin" || note.therapistId === session.user.id;
+
   const sections = [
     { key: "subjective", label: "Subjetivo", description: "Lo que el paciente reporta" },
     { key: "objective", label: "Objetivo", description: "Observaciones del terapeuta" },
-    { key: "assessment", label: "Evaluación", description: "Análisis clínico" },
-    { key: "plan", label: "Plan", description: "Próximos pasos y tratamiento" },
+    { key: "assessment", label: "Evaluacion", description: "Analisis clinico" },
+    { key: "plan", label: "Plan", description: "Proximos pasos y tratamiento" },
   ] as const;
 
   return (
@@ -40,8 +44,10 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
               <span>Terapeuta: {note.therapist.name}</span>
             </div>
           </div>
-          <div className="flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-1 rounded-full">
-            <Shield className="h-3 w-3" /> Encriptado
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-1 rounded-full">
+              <Shield className="h-3 w-3" /> Encriptado
+            </div>
           </div>
         </div>
 
@@ -51,7 +57,7 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
               <h3 className="font-semibold text-rasma-dark text-sm mb-0.5">{s.label}</h3>
               <p className="text-xs text-muted-foreground mb-2">{s.description}</p>
               <p className="text-sm whitespace-pre-wrap">
-                {note.content[s.key] || <span className="text-muted-foreground italic">Sin información</span>}
+                {note.content[s.key] || <span className="text-muted-foreground italic">Sin informacion</span>}
               </p>
             </div>
           ))}
@@ -61,6 +67,18 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
           Creada: {new Date(note.createdAt).toLocaleString("es-CL")}
           {note.updatedAt !== note.createdAt && ` · Actualizada: ${new Date(note.updatedAt).toLocaleString("es-CL")}`}
         </p>
+
+        {/* Action buttons */}
+        {canEdit && (
+          <div className="flex items-center gap-3 pt-2 border-t">
+            <Link href={`/notas/${id}/editar`}>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Pencil className="h-3.5 w-3.5" /> Editar
+              </Button>
+            </Link>
+            <NoteDeleteButton noteId={id} />
+          </div>
+        )}
       </div>
     </div>
   );

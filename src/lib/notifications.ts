@@ -327,7 +327,7 @@ export async function processPendingReminders(): Promise<{
       appointment: {
         with: {
           patient: { columns: { id: true, firstName: true, lastName: true, email: true } },
-          therapist: { columns: { id: true, name: true } },
+          therapist: { columns: { id: true, name: true, email: true } },
         },
       },
     },
@@ -339,10 +339,6 @@ export async function processPendingReminders(): Promise<{
     stats.processed++;
 
     const appt = reminder.appointment;
-    if (!appt.patient.email) {
-      await db.update(reminders).set({ sent: true, sentAt: now, error: "no_email" }).where(eq(reminders.id, reminder.id));
-      continue;
-    }
     if (appt.status !== "programada") {
       await db.update(reminders).set({ sent: true, sentAt: now, error: "appointment_not_active" }).where(eq(reminders.id, reminder.id));
       continue;
@@ -366,10 +362,23 @@ export async function processPendingReminders(): Promise<{
       meetingLink: appt.meetingLink,
     };
 
-    const success = await sendAppointmentReminder(appt.patient.email, emailData, hoursUntil);
+    let sentOk = true;
 
-    if (success) {
-      stats.sent++;
+    // Send reminder to patient
+    if (appt.patient.email) {
+      const patientSent = await sendAppointmentReminder(appt.patient.email, emailData, hoursUntil);
+      if (patientSent) stats.sent++;
+      else sentOk = false;
+    }
+
+    // Send reminder to therapist (with Meet link included)
+    if (appt.therapist.email) {
+      const therapistSent = await sendAppointmentReminder(appt.therapist.email, emailData, hoursUntil);
+      if (therapistSent) stats.sent++;
+      else sentOk = false;
+    }
+
+    if (sentOk) {
       await db.update(reminders).set({ sent: true, sentAt: now }).where(eq(reminders.id, reminder.id));
     } else {
       stats.errors++;

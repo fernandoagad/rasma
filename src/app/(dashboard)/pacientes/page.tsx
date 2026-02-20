@@ -1,4 +1,4 @@
-import { getPatientsEnriched } from "@/actions/patients";
+import { getPatientsEnriched, getTherapists } from "@/actions/patients";
 import { PatientTable } from "@/components/patients/patient-table";
 import { PatientSearch } from "@/components/patients/patient-search";
 import { Pagination } from "@/components/patients/pagination";
@@ -15,11 +15,14 @@ export default async function PacientesPage({
   searchParams: Promise<{ q?: string; status?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const { patients, total, page, pageSize, totalPages } = await getPatientsEnriched({
-    search: params.q,
-    status: params.status,
-    page: params.page ? parseInt(params.page) : 1,
-  });
+  const [{ patients, total, page, pageSize, totalPages }, therapists] = await Promise.all([
+    getPatientsEnriched({
+      search: params.q,
+      status: params.status,
+      page: params.page ? parseInt(params.page) : 1,
+    }),
+    getTherapists(),
+  ]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -40,7 +43,7 @@ export default async function PacientesPage({
         <PatientSearch />
       </Suspense>
 
-      <PatientTable patients={patients} />
+      <PatientTable patients={patients} therapists={therapists} />
 
       <Suspense>
         <Pagination

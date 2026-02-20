@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
+const openRoutes = ["/postular"];
+
 const publicRoutes = ["/login", "/recuperar", "/registro"];
 
 const rolePermissions: Record<string, string[]> = {
@@ -8,10 +10,27 @@ const rolePermissions: Record<string, string[]> = {
   terapeuta: ["/", "/pacientes", "/citas", "/calendario", "/notas", "/planes", "/perfil"],
   recepcionista: ["/", "/pacientes", "/citas", "/calendario", "/pagos", "/perfil"],
   supervisor: ["/", "/pacientes", "/citas", "/calendario", "/notas", "/planes", "/pagos", "/reportes", "/perfil"],
+  rrhh: ["/", "/rrhh", "/perfil"],
+  paciente: ["/", "/mis-citas", "/perfil", "/pendiente"],
+  invitado: ["/pendiente", "/perfil"],
+};
+
+// Roles that get redirected away from "/" to their own landing page
+const roleHomeRedirects: Record<string, string> = {
+  paciente: "/mis-citas",
+  invitado: "/pendiente",
 };
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
+
+  // Allow open routes (accessible to everyone, auth or not, no redirect)
+  const isOpen = openRoutes.some(
+    (route) => pathname === route || pathname.startsWith(route + "/")
+  );
+  if (isOpen) {
+    return NextResponse.next();
+  }
 
   // Allow public routes
   const isPublic = publicRoutes.some(
@@ -20,7 +39,9 @@ export default auth((req) => {
 
   if (isPublic) {
     if (req.auth) {
-      return NextResponse.redirect(new URL("/", req.nextUrl));
+      const role = req.auth.user?.role;
+      const homeRedirect = role ? roleHomeRedirects[role] : undefined;
+      return NextResponse.redirect(new URL(homeRedirect || "/", req.nextUrl));
     }
     return NextResponse.next();
   }
@@ -34,6 +55,12 @@ export default auth((req) => {
 
   // Check role-based access
   const role = req.auth.user?.role;
+
+  // Redirect paciente/invitado from "/" to their landing page
+  if (role && pathname === "/" && roleHomeRedirects[role]) {
+    return NextResponse.redirect(new URL(roleHomeRedirects[role], req.nextUrl));
+  }
+
   if (role) {
     const allowed = rolePermissions[role] || [];
     if (!allowed.includes("*")) {
@@ -41,7 +68,9 @@ export default auth((req) => {
         (route) => pathname === route || pathname.startsWith(route + "/")
       );
       if (!hasAccess) {
-        return NextResponse.redirect(new URL("/", req.nextUrl));
+        // Redirect to role-appropriate home instead of "/"
+        const home = roleHomeRedirects[role] || "/";
+        return NextResponse.redirect(new URL(home, req.nextUrl));
       }
     }
   }

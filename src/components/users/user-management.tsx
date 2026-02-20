@@ -119,12 +119,14 @@ export function UserManagement({ users }: { users: User[] }) {
   );
 
   const handleResetPassword = async (userId: string, userName: string) => {
-    const result = await adminResetPassword(userId);
-    if (result.success && result.tempPassword) {
-      setTempPassword(result.tempPassword);
-      toast.success(`Contraseña restablecida para ${userName}`);
-    } else if (result.error) {
-      toast.error(result.error);
+    try {
+      const result = await adminResetPassword(userId);
+      if (result.success && result.tempPassword) {
+        setTempPassword(result.tempPassword);
+        toast.success(`Contraseña restablecida para ${userName}`);
+      }
+    } catch {
+      toast.error("Error al restablecer la contraseña.");
     }
   };
 
