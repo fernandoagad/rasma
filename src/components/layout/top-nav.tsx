@@ -23,6 +23,7 @@ import {
   ChevronDown,
   Search,
   MessageSquare,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UI } from "@/constants/ui";
@@ -62,6 +63,7 @@ const navItems = [
   { href: "/notas", label: UI.nav.notes, icon: FileText, roles: ["admin", "terapeuta", "supervisor"] },
   { href: "/planes", label: UI.nav.plans, icon: ClipboardList, roles: ["admin", "terapeuta", "supervisor"] },
   { href: "/reportes", label: UI.nav.reports, icon: BarChart3, roles: ["admin", "supervisor"] },
+  { href: "/gastos", label: UI.nav.expenses, icon: Wallet, roles: ["admin", "supervisor"] },
   { href: "/rrhh", label: UI.nav.rrhh, icon: Briefcase, roles: ["admin", "rrhh"] },
   { href: "/configuracion/usuarios", label: UI.nav.users, icon: UserCog, roles: ["admin"] },
   { href: "/configuracion", label: UI.nav.settings, icon: Settings, roles: ["admin"] },

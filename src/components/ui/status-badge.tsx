@@ -30,6 +30,16 @@ const statusConfig: Record<string, Record<string, { variant: BadgeVariant; label
     disponible: { variant: "success", label: "Disponible" },
     completo: { variant: "muted", label: "Completo" },
   },
+  expense_category: {
+    arriendo: { variant: "default", label: "Arriendo" },
+    servicios_basicos: { variant: "info", label: "Servicios Básicos" },
+    suministros: { variant: "teal", label: "Suministros" },
+    mantenimiento: { variant: "warning", label: "Mantenimiento" },
+    seguros: { variant: "lime", label: "Seguros" },
+    marketing: { variant: "secondary", label: "Marketing" },
+    software: { variant: "muted", label: "Software" },
+    otros: { variant: "outline", label: "Otros" },
+  },
   role: {
     admin: { variant: "default", label: "Administrador" },
     terapeuta: { variant: "teal", label: "Terapeuta" },

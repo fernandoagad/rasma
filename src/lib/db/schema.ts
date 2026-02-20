@@ -408,6 +408,52 @@ export const payments = sqliteTable(
 );
 
 // ============================================================
+// EXPENSES (Gastos operativos)
+// ============================================================
+
+export const expenses = sqliteTable(
+  "expenses",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    description: text("description").notNull(),
+    amount: integer("amount").notNull(), // Stored in cents (CLP)
+    category: text("category", {
+      enum: [
+        "arriendo",
+        "servicios_basicos",
+        "suministros",
+        "mantenimiento",
+        "seguros",
+        "marketing",
+        "software",
+        "otros",
+      ],
+    }).notNull(),
+    date: text("date").notNull(), // ISO "YYYY-MM-DD"
+    receiptDriveFileId: text("receipt_drive_file_id"),
+    receiptFileName: text("receipt_file_name"),
+    receiptMimeType: text("receipt_mime_type"),
+    receiptViewLink: text("receipt_view_link"),
+    notes: text("notes"),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("exp_category_idx").on(table.category),
+    index("exp_date_idx").on(table.date),
+  ]
+);
+
+// ============================================================
 // REMINDERS
 // ============================================================
 
@@ -587,6 +633,13 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   appointment: one(appointments, {
     fields: [payments.appointmentId],
     references: [appointments.id],
+  }),
+}));
+
+export const expensesRelations = relations(expenses, ({ one }) => ({
+  creator: one(users, {
+    fields: [expenses.createdBy],
+    references: [users.id],
   }),
 }));
 

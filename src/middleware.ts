@@ -9,7 +9,7 @@ const rolePermissions: Record<string, string[]> = {
   admin: ["*"],
   terapeuta: ["/", "/pacientes", "/citas", "/calendario", "/notas", "/planes", "/perfil"],
   recepcionista: ["/", "/pacientes", "/citas", "/calendario", "/pagos", "/perfil"],
-  supervisor: ["/", "/pacientes", "/citas", "/calendario", "/notas", "/planes", "/pagos", "/reportes", "/perfil"],
+  supervisor: ["/", "/pacientes", "/citas", "/calendario", "/notas", "/planes", "/pagos", "/reportes", "/gastos", "/perfil"],
   rrhh: ["/", "/rrhh", "/perfil"],
   paciente: ["/", "/mis-citas", "/perfil", "/pendiente"],
   invitado: ["/pendiente", "/perfil"],

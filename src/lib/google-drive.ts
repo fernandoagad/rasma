@@ -322,6 +322,69 @@ export async function uploadStaffFile(
 }
 
 /**
+ * Upload an expense receipt to Google Drive.
+ * Stored under "RASMA - Gastos" folder.
+ */
+export async function uploadExpenseReceipt(
+  file: {
+    buffer: Buffer;
+    fileName: string;
+    mimeType: string;
+    size: number;
+  }
+) {
+  const auth = await getAuthenticatedClient();
+  const drive = google.drive({ version: "v3", auth });
+
+  // Get or create "RASMA - Gastos" root folder
+  const rootFolderName = "RASMA - Gastos";
+  const rootSearch = await drive.files.list({
+    q: `name='${rootFolderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    fields: "files(id)",
+    spaces: "drive",
+  });
+
+  let rootFolderId: string;
+  if (rootSearch.data.files?.length) {
+    rootFolderId = rootSearch.data.files[0].id!;
+  } else {
+    const rootFolder = await drive.files.create({
+      requestBody: {
+        name: rootFolderName,
+        mimeType: "application/vnd.google-apps.folder",
+      },
+      fields: "id",
+    });
+    rootFolderId = rootFolder.data.id!;
+  }
+
+  // Upload file
+  const stream = Readable.from(file.buffer);
+  const driveFile = await drive.files.create({
+    requestBody: {
+      name: file.fileName,
+      parents: [rootFolderId],
+    },
+    media: {
+      mimeType: file.mimeType,
+      body: stream,
+    },
+    fields: "id,webViewLink,webContentLink",
+  });
+
+  await drive.permissions.create({
+    fileId: driveFile.data.id!,
+    requestBody: { role: "reader", type: "anyone" },
+  });
+
+  return {
+    driveFileId: driveFile.data.id!,
+    viewLink: driveFile.data.webViewLink || null,
+    downloadLink: driveFile.data.webContentLink || null,
+  };
+}
+
+/**
  * Upload an applicant's file (CV/cover letter) to Google Drive.
  * Stored under "RASMA - Postulaciones/{applicantName}" folder.
  */
