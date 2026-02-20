@@ -276,9 +276,22 @@ export function ExpenseTable({ expenses }: { expenses: Expense[] }) {
                     key={e.id}
                     className={cn(
                       "transition-colors",
+                      (previewable || hasReceipt) && "cursor-pointer",
                       isSelected &&
                         "bg-rasma-teal/5 border-l-2 border-l-rasma-teal"
                     )}
+                    onClick={(event) => {
+                      const target = event.target as HTMLElement;
+                      if (
+                        target.closest(
+                          'button, a, input, [role="checkbox"], [role="menuitem"]'
+                        )
+                      )
+                        return;
+                      if (previewable) setPreviewExpense(e);
+                      else if (hasReceipt)
+                        window.open(e.receiptViewLink!, "_blank");
+                    }}
                   >
                     <TableCell className="pl-4">
                       <Checkbox

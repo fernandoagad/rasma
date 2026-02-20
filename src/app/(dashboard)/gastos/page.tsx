@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Button } from "@/components/ui/button";
 import { ExpenseTable } from "@/components/expenses/expense-table";
+import { ExpenseExport } from "@/components/expenses/expense-export";
 import { Suspense } from "react";
 import { DateRangeFilter } from "./date-range-filter";
 
@@ -83,11 +84,14 @@ export default async function GastosPage({
         title="Gastos"
         subtitle={`${total} registros`}
         action={
-          <Link href="/gastos/nuevo">
-            <Button>
-              <Wallet className="mr-2 h-4 w-4" /> Nuevo Gasto
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <ExpenseExport />
+            <Link href="/gastos/nuevo">
+              <Button>
+                <Wallet className="mr-2 h-4 w-4" /> Nuevo Gasto
+              </Button>
+            </Link>
+          </div>
         }
       />
 
