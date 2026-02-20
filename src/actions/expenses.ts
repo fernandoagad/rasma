@@ -31,6 +31,7 @@ const expenseSchema = z.object({
     "seguros",
     "marketing",
     "software",
+    "personal",
     "otros",
   ]),
   date: z.string().min(1, "Seleccione una fecha"),

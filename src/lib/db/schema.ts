@@ -428,6 +428,7 @@ export const expenses = sqliteTable(
         "seguros",
         "marketing",
         "software",
+        "personal",
         "otros",
       ],
     }).notNull(),

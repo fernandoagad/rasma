@@ -38,6 +38,7 @@ const statusConfig: Record<string, Record<string, { variant: BadgeVariant; label
     seguros: { variant: "lime", label: "Seguros" },
     marketing: { variant: "secondary", label: "Marketing" },
     software: { variant: "muted", label: "Software" },
+    personal: { variant: "default", label: "Personal" },
     otros: { variant: "outline", label: "Otros" },
   },
   role: {

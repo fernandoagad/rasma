@@ -33,6 +33,7 @@ const expenseFilters = [
       { value: "seguros", label: "Seguros" },
       { value: "marketing", label: "Marketing" },
       { value: "software", label: "Software" },
+      { value: "personal", label: "Personal" },
       { value: "otros", label: "Otros" },
     ],
   },

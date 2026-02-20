@@ -14,6 +14,7 @@ import {
   Shield,
   Megaphone,
   Monitor,
+  UserCheck,
   MoreHorizontal,
   Upload,
   FileText,
@@ -29,6 +30,7 @@ const CATEGORIES = [
   { value: "seguros", label: "Seguros", icon: Shield },
   { value: "marketing", label: "Marketing", icon: Megaphone },
   { value: "software", label: "Software", icon: Monitor },
+  { value: "personal", label: "Personal", icon: UserCheck },
   { value: "otros", label: "Otros", icon: MoreHorizontal },
 ] as const;
 

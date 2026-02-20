@@ -174,6 +174,7 @@ export const UI = {
       seguros: "Seguros",
       marketing: "Marketing",
       software: "Software",
+      personal: "Personal",
       otros: "Otros",
     } as Record<string, string>,
   },
@@ -193,6 +194,8 @@ export const UI = {
     { label: "Diseño gráfico", category: "marketing" },
     { label: "Licencia software", category: "software" },
     { label: "Hosting / dominio", category: "software" },
+    { label: "Pago sesión sin contrato", category: "personal" },
+    { label: "Honorarios profesional", category: "personal" },
   ] as { label: string; category: string }[],
   users: {
     title: "Gestión de Usuarios",
