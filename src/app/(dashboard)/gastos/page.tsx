@@ -2,21 +2,12 @@ import { getExpenses, getExpenseStats } from "@/actions/expenses";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Wallet, DollarSign, CalendarDays, FileText, ExternalLink } from "lucide-react";
+import { Wallet, DollarSign, CalendarDays } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { PageHeader } from "@/components/ui/page-header";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Button } from "@/components/ui/button";
-import { ExpenseActions } from "@/components/expenses/expense-actions";
+import { ExpenseTable } from "@/components/expenses/expense-table";
 import { Suspense } from "react";
 import { DateRangeFilter } from "./date-range-filter";
 
@@ -135,85 +126,7 @@ export default async function GastosPage({
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="pl-4">Descripción</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Monto</TableHead>
-              <TableHead className="hidden md:table-cell">Categoría</TableHead>
-              <TableHead className="hidden md:table-cell">
-                Comprobante
-              </TableHead>
-              <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {expenses.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-center py-8 text-muted-foreground"
-                >
-                  No hay gastos registrados.
-                </TableCell>
-              </TableRow>
-            ) : (
-              expenses.map((e) => (
-                <TableRow key={e.id}>
-                  <TableCell className="pl-4">
-                    <div>
-                      <span className="font-medium text-sm">
-                        {e.description}
-                      </span>
-                      {e.creator && (
-                        <p className="text-xs text-muted-foreground">
-                          por {e.creator.name}
-                        </p>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {new Date(e.date + "T12:00:00").toLocaleDateString("es-CL")}
-                  </TableCell>
-                  <TableCell className="text-sm font-medium">
-                    ${(e.amount / 100).toLocaleString("es-CL")}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <StatusBadge
-                      type="expense_category"
-                      status={e.category}
-                    />
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {e.receiptViewLink ? (
-                      <a
-                        href={e.receiptViewLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 hover:underline"
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                        Ver
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <ExpenseActions
-                      expenseId={e.id}
-                      receiptViewLink={e.receiptViewLink}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <ExpenseTable expenses={expenses} />
 
       {totalPages > 1 && (
         <div className="flex justify-center gap-2">

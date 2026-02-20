@@ -3,7 +3,7 @@
 import { requireRole } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { expenses } from "@/lib/db/schema";
-import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lte, inArray } from "drizzle-orm";
 import { logAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -212,6 +212,39 @@ export async function deleteExpense(id: string) {
 
   revalidatePath("/gastos");
   return { success: true };
+}
+
+export async function bulkDeleteExpenses(ids: string[]) {
+  const session = await requireRole(ADMIN_SUPERVISOR);
+  if (ids.length === 0) return { error: "No se seleccionaron gastos." };
+
+  const toDelete = await db.query.expenses.findMany({
+    where: inArray(expenses.id, ids),
+  });
+
+  // Clean up Drive receipts
+  for (const expense of toDelete) {
+    if (expense.receiptDriveFileId) {
+      try {
+        await deleteFileFromDriveById(expense.receiptDriveFileId);
+      } catch (err) {
+        console.error("Failed to delete receipt from Drive:", err);
+      }
+    }
+  }
+
+  await db.delete(expenses).where(inArray(expenses.id, ids));
+
+  await logAudit({
+    userId: session.user.id,
+    action: "delete",
+    entityType: "expense",
+    entityId: ids.join(","),
+    details: { count: toDelete.length },
+  });
+
+  revalidatePath("/gastos");
+  return { success: true, count: toDelete.length };
 }
 
 export async function getExpenseStats() {
