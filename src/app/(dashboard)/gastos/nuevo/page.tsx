@@ -1,5 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { ExpenseForm } from "@/components/expenses/expense-form";
 
 export default async function NuevoGastoPage() {
@@ -9,7 +11,16 @@ export default async function NuevoGastoPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-rasma-dark">Nuevo Gasto</h1>
+      <div>
+        <Link
+          href="/gastos"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-rasma-dark transition mb-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver a Gastos
+        </Link>
+        <h1 className="text-2xl font-bold text-rasma-dark">Nuevo Gasto</h1>
+      </div>
       <ExpenseForm />
     </div>
   );
