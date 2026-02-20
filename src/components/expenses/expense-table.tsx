@@ -33,7 +33,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { UI } from "@/constants/ui";
-import { deleteExpense, bulkDeleteExpenses } from "@/actions/expenses";
+import { deleteExpense, bulkDeleteExpenses, bulkUpdateCategory } from "@/actions/expenses";
 import { toast } from "sonner";
 import {
   Search,
@@ -46,6 +46,7 @@ import {
   Wallet,
   Loader2,
   CheckSquare,
+  Tag,
 } from "lucide-react";
 
 interface Expense {
@@ -140,6 +141,23 @@ export function ExpenseTable({ expenses }: { expenses: Expense[] }) {
     setDeleteTarget(null);
   };
 
+  const handleBulkCategory = (category: string) => {
+    startTransition(async () => {
+      const result = await bulkUpdateCategory(
+        Array.from(selectedIds),
+        category
+      );
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success(
+          `${(result as { count: number }).count} gastos actualizados a ${UI.expenses.categories[category] || category}`
+        );
+        router.refresh();
+      }
+    });
+  };
+
   const handleBulkDelete = () => {
     if (
       !confirm(
@@ -184,7 +202,36 @@ export function ExpenseTable({ expenses }: { expenses: Expense[] }) {
           <span className="text-sm font-medium">
             {selectedIds.size} seleccionados
           </span>
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" disabled={isPending}>
+                  {isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <Tag className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  Cambiar categoría
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {Object.entries(UI.expenses.categories)
+                  .filter(([key]) => key !== "all")
+                  .map(([key, label]) => (
+                    <DropdownMenuItem
+                      key={key}
+                      onClick={() => handleBulkCategory(key)}
+                    >
+                      <StatusBadge
+                        type="expense_category"
+                        status={key}
+                        className="mr-2"
+                      />
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               size="sm"
               variant="destructive"

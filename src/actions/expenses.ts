@@ -247,6 +247,49 @@ export async function bulkDeleteExpenses(ids: string[]) {
   return { success: true, count: toDelete.length };
 }
 
+const VALID_CATEGORIES = [
+  "arriendo",
+  "servicios_basicos",
+  "suministros",
+  "mantenimiento",
+  "seguros",
+  "marketing",
+  "software",
+  "personal",
+  "otros",
+] as const;
+
+export async function bulkUpdateCategory(
+  ids: string[],
+  category: string
+) {
+  const session = await requireRole(ADMIN_SUPERVISOR);
+  if (ids.length === 0) return { error: "No se seleccionaron gastos." };
+
+  if (!(VALID_CATEGORIES as readonly string[]).includes(category)) {
+    return { error: "Categoría no válida." };
+  }
+
+  await db
+    .update(expenses)
+    .set({
+      category: category as (typeof expenses.category.enumValues)[number],
+      updatedAt: new Date(),
+    })
+    .where(inArray(expenses.id, ids));
+
+  await logAudit({
+    userId: session.user.id,
+    action: "update",
+    entityType: "expense",
+    entityId: ids.join(","),
+    details: { count: ids.length, newCategory: category },
+  });
+
+  revalidatePath("/gastos");
+  return { success: true, count: ids.length };
+}
+
 export async function getExpenseStats() {
   await requireRole(ADMIN_SUPERVISOR);
 
