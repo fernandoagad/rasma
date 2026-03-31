@@ -9,7 +9,7 @@ import { loginSchema } from "@/lib/validations/auth";
 import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  session: { strategy: "jwt", maxAge: 24 * 60 * 60 },
+  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 }, // 30 days for "remember me"
   pages: {
     signIn: "/login",
   },
@@ -30,12 +30,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "Correo electrónico", type: "email" },
         password: { label: "Contraseña", type: "password" },
+        rememberMe: { type: "text" },
       },
       authorize: async (credentials) => {
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
         const { email, password } = parsed.data;
+        const rememberMe = credentials?.rememberMe === "true";
 
         const rateCheck = checkRateLimit(`login:${email}`);
         if (!rateCheck.allowed) {
@@ -79,6 +81,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           role: user.role,
           linkedPatientId: user.linkedPatientId || null,
+          rememberMe,
         };
       },
     }),
@@ -204,7 +207,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = user.role;
         token.id = user.id;
         token.linkedPatientId = user.linkedPatientId;
+        // Store remember-me preference (Google sign-in defaults to true)
+        token.rememberMe = (user as Record<string, unknown>).rememberMe ?? true;
       }
+
+      // Soft expiry: non-remember-me sessions expire after 24 hours
+      // token.iat is set automatically by NextAuth (seconds since epoch)
+      if (!token.rememberMe && token.iat) {
+        const ageSeconds = Math.floor(Date.now() / 1000) - (token.iat as number);
+        if (ageSeconds > 24 * 60 * 60) {
+          // Clear identity fields — session callback will see missing id and force re-login
+          delete token.id;
+          delete token.role;
+        }
+      }
+
       // Pass Google access token through to session if needed
       if (account?.provider === "google" && account.access_token) {
         token.googleAccessToken = account.access_token;
@@ -213,6 +230,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     session({ session, token }) {
+      // If token.id was cleared (soft expiry), invalidate the session
+      if (!token.id) {
+        // @ts-expect-error -- force null user so auth checks redirect to login
+        session.user = null;
+        return session;
+      }
       if (session.user) {
         session.user.role = token.role as string;
         session.user.id = token.id as string;

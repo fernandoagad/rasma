@@ -75,44 +75,44 @@ export function NextAppointment({ appointment, userRole }: NextAppointmentProps)
   const isOnline = appointment.modality === "online";
 
   return (
-    <div className={`rounded-2xl p-4 sm:p-5 ${
+    <div className={`rounded-lg p-5 sm:p-6 ${
       isNow
-        ? "bg-gradient-to-br from-rasma-teal/10 via-rasma-teal/5 to-transparent border border-rasma-teal/20"
-        : "bg-gradient-to-br from-rasma-dark/[0.04] via-transparent to-transparent border border-border"
+        ? "bg-white border border-rasma-dark/40 border-l-[3px] border-l-rasma-dark"
+        : "bg-white border border-border"
     }`}>
       {/* Top: countdown badge */}
-      <div className="flex items-center justify-between mb-3">
-        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+      <div className="flex items-center justify-between mb-4">
+        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-md text-sm font-bold ${
           isNow
-            ? "bg-rasma-teal text-white"
+            ? "bg-rasma-dark text-white"
             : "bg-rasma-dark/10 text-rasma-dark"
         }`}>
           {isNow && (
-            <span className="relative flex h-1.5 w-1.5">
+            <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
             </span>
           )}
-          <Clock className="h-3 w-3" />
+          <Clock className="h-4 w-4" />
           {countdown}
         </div>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-sm text-muted-foreground font-medium">
           {formatTime(appointment.dateTime)} – {getEndTime(appointment.dateTime, appointment.durationMinutes)}
         </span>
       </div>
 
       {/* Main: patient info */}
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex items-center gap-4 mb-4">
         <AvatarInitials name={patientName} size="lg" />
         <div className="flex-1 min-w-0">
-          <p className="text-base sm:text-lg font-bold text-rasma-dark truncate">{patientName}</p>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-            <span className="capitalize">{appointment.sessionType}</span>
+          <p className="text-lg sm:text-xl font-bold text-rasma-dark truncate">{patientName}</p>
+          <div className="flex items-center gap-2.5 text-sm text-muted-foreground mt-1">
+            <span className="capitalize font-medium">{appointment.sessionType}</span>
             <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
             <span>{appointment.durationMinutes} min</span>
             <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
-            <span className="flex items-center gap-0.5">
-              {isOnline ? <Video className="h-3 w-3 text-rasma-teal" /> : <MapPin className="h-3 w-3" />}
+            <span className="flex items-center gap-1">
+              {isOnline ? <Video className="h-4 w-4 text-rasma-dark" /> : <MapPin className="h-4 w-4" />}
               {isOnline ? "Online" : "Presencial"}
             </span>
             {userRole !== "terapeuta" && (
@@ -126,27 +126,26 @@ export function NextAppointment({ appointment, userRole }: NextAppointmentProps)
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {isOnline && appointment.meetingLink ? (
           <Button
-            className="bg-rasma-teal text-white hover:bg-rasma-teal/90 shadow-sm gap-1.5 h-8 px-4 text-xs rounded-lg flex-1 sm:flex-none"
+            className="bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90 gap-2 h-10 px-5 text-sm rounded-lg flex-1 sm:flex-none font-semibold"
             asChild
           >
             <a href={appointment.meetingLink} target="_blank" rel="noopener noreferrer">
-              <Video className="h-3.5 w-3.5" />
+              <Video className="h-4 w-4" />
               Unirse a Meet
             </a>
           </Button>
         ) : null}
         <Button
           variant="outline"
-          size="sm"
-          className="h-8 px-3 text-xs gap-1 rounded-lg text-muted-foreground hover:text-foreground"
+          className="h-10 px-4 text-sm gap-1.5 rounded-xl text-muted-foreground hover:text-foreground font-medium"
           asChild
         >
           <Link href={`/citas/${appointment.id}`}>
             Ver detalles
-            <ArrowRight className="h-3 w-3" />
+            <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
       </div>

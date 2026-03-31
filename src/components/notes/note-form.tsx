@@ -70,10 +70,10 @@ const SOAP_SECTIONS = [
 ];
 
 const colorClasses: Record<string, { bg: string; icon: string; border: string }> = {
-  blue: { bg: "bg-blue-100", icon: "text-blue-600", border: "border-blue-200 focus-within:border-blue-400" },
-  green: { bg: "bg-green-100", icon: "text-green-600", border: "border-green-200 focus-within:border-green-400" },
-  purple: { bg: "bg-purple-100", icon: "text-purple-600", border: "border-purple-200 focus-within:border-purple-400" },
-  orange: { bg: "bg-orange-100", icon: "text-orange-600", border: "border-orange-200 focus-within:border-orange-400" },
+  blue: { bg: "bg-rasma-dark", icon: "text-white", border: "border-zinc-200 focus-within:border-rasma-dark" },
+  green: { bg: "bg-rasma-dark", icon: "text-white", border: "border-zinc-200 focus-within:border-rasma-dark" },
+  purple: { bg: "bg-rasma-dark", icon: "text-white", border: "border-zinc-200 focus-within:border-rasma-dark" },
+  orange: { bg: "bg-rasma-dark", icon: "text-white", border: "border-zinc-200 focus-within:border-rasma-dark" },
 };
 
 export function NoteForm({ appointments, preselectedId }: Props) {
@@ -106,13 +106,13 @@ export function NoteForm({ appointments, preselectedId }: Props) {
       <Card>
         <CardContent className="pt-2">
           <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">1</div>
-            <h3 className="font-semibold text-sm">Seleccionar cita completada</h3>
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-rasma-dark text-rasma-lime text-sm font-bold">1</div>
+            <h3 className="font-bold text-base">Seleccionar cita completada</h3>
             <span className="text-xs text-muted-foreground ml-auto">{appointments.length} pendiente{appointments.length !== 1 ? "s" : ""}</span>
           </div>
 
           {selectedAppt ? (
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-rasma-teal/5 border-rasma-teal/20">
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-zinc-50 border-border">
               <div className="flex items-center gap-3">
                 <AvatarInitials name={`${selectedAppt.patient.firstName} ${selectedAppt.patient.lastName}`} size="sm" />
                 <div>
@@ -186,11 +186,11 @@ export function NoteForm({ appointments, preselectedId }: Props) {
       <Card>
         <CardContent className="pt-2">
           <div className="flex items-center gap-2 mb-1">
-            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">2</div>
-            <h3 className="font-semibold text-sm">Nota SOAP</h3>
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-rasma-dark text-rasma-lime text-sm font-bold">2</div>
+            <h3 className="font-bold text-base">Nota SOAP</h3>
           </div>
           <div className="flex items-center gap-1.5 mb-5 ml-8">
-            <Shield className="h-3.5 w-3.5 text-green-600" />
+            <Shield className="h-3.5 w-3.5 text-rasma-dark" />
             <p className="text-xs text-muted-foreground">Contenido encriptado AES-256-GCM</p>
           </div>
 
@@ -200,12 +200,12 @@ export function NoteForm({ appointments, preselectedId }: Props) {
               return (
                 <div key={section.key} className={cn("rounded-xl border p-4 transition-colors", colors.border)}>
                   <div className="flex items-center gap-2 mb-2">
-                    <div className={cn("flex items-center justify-center h-7 w-7 rounded-lg", colors.bg)}>
+                    <div className={cn("flex items-center justify-center h-9 w-9 rounded-lg", colors.bg)}>
                       <section.icon className={cn("h-4 w-4", colors.icon)} />
                     </div>
                     <div>
                       <Label className="text-sm font-semibold">{section.label}</Label>
-                      <p className="text-[10px] text-muted-foreground">{section.description}</p>
+                      <p className="text-xs text-muted-foreground">{section.description}</p>
                     </div>
                   </div>
                   <Textarea
@@ -223,7 +223,7 @@ export function NoteForm({ appointments, preselectedId }: Props) {
 
       {/* Error */}
       {state?.error && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+        <div className="p-3 rounded-lg border border-rasma-dark bg-zinc-50 text-sm text-rasma-dark">
           {state.error}
         </div>
       )}
@@ -233,7 +233,7 @@ export function NoteForm({ appointments, preselectedId }: Props) {
         <Button
           type="button"
           variant="outline"
-          className="flex-1"
+          className="flex-1 h-12 text-base font-semibold rounded-xl"
           onClick={() => router.back()}
         >
           Cancelar
@@ -241,16 +241,16 @@ export function NoteForm({ appointments, preselectedId }: Props) {
         <Button
           type="submit"
           disabled={pending || !selectedId}
-          className="flex-1 bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90"
+          className="flex-1 h-12 text-base font-bold rounded-xl bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90"
         >
           {pending ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               Guardando nota...
             </>
           ) : (
             <>
-              <Shield className="mr-2 h-4 w-4" />
+              <Shield className="mr-2 h-5 w-5" />
               Guardar nota encriptada
             </>
           )}

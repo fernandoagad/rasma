@@ -116,3 +116,14 @@ export async function searchStaffForChat(query: string) {
     limit: 10,
   });
 }
+
+// List all active staff (for default new-conversation view)
+export async function listAllStaff() {
+  await requireStaff();
+  return db.query.users.findMany({
+    where: eq(users.active, true),
+    columns: { id: true, name: true, role: true, specialty: true, image: true },
+    orderBy: (u, { asc }) => [asc(u.name)],
+    limit: 30,
+  });
+}

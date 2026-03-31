@@ -47,12 +47,12 @@ export function RecurringSeriesCard({ groupId, currentId }: RecurringSeriesCardP
   if (!loaded) return null;
 
   return (
-    <Card className="border-purple-200 bg-purple-50/30">
+    <Card className="border-border bg-zinc-50/50">
       <CardContent className="pt-2">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Repeat className="h-4 w-4 text-purple-600" />
-            <p className="text-sm font-semibold text-purple-900">
+            <Repeat className="h-4 w-4 text-rasma-dark" />
+            <p className="text-sm font-semibold text-rasma-dark">
               Serie recurrente ({appointments.length} citas)
             </p>
           </div>
@@ -101,12 +101,12 @@ export function RecurringSeriesCard({ groupId, currentId }: RecurringSeriesCardP
                   className={cn(
                     "flex items-center justify-between p-2 rounded-lg text-sm transition-colors",
                     isCurrent
-                      ? "bg-purple-100 border border-purple-300"
-                      : "hover:bg-purple-50"
+                      ? "bg-zinc-100 border border-zinc-300"
+                      : "hover:bg-zinc-50"
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    {isCurrent && <span className="h-1.5 w-1.5 rounded-full bg-purple-600" />}
+                    {isCurrent && <span className="h-1.5 w-1.5 rounded-full bg-rasma-dark" />}
                     <span className={cn("capitalize", isCurrent && "font-semibold")}>
                       {dt.toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" })}
                     </span>

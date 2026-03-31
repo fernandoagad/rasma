@@ -25,7 +25,7 @@ export function AppointmentStatusButtons({ appointmentId }: { appointmentId: str
           onClick={() => handleStatus("completada")}
           disabled={loading !== null}
           variant="outline"
-          className="gap-2 border-green-200 bg-green-50 text-green-800 hover:bg-green-100 hover:text-green-900"
+          className="gap-2 bg-rasma-dark text-white hover:bg-rasma-dark/90"
         >
           {loading === "completada" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
           Completada
@@ -34,7 +34,7 @@ export function AppointmentStatusButtons({ appointmentId }: { appointmentId: str
           onClick={() => handleStatus("no_asistio")}
           disabled={loading !== null}
           variant="outline"
-          className="gap-2 border-yellow-200 bg-yellow-50 text-yellow-800 hover:bg-yellow-100 hover:text-yellow-900"
+          className="gap-2 border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100"
         >
           {loading === "no_asistio" ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
           No asistio
@@ -43,7 +43,7 @@ export function AppointmentStatusButtons({ appointmentId }: { appointmentId: str
           onClick={() => handleStatus("cancelada")}
           disabled={loading !== null}
           variant="outline"
-          className="gap-2 border-red-200 bg-red-50 text-red-800 hover:bg-red-100 hover:text-red-900"
+          className="gap-2 border-rasma-red/30 text-rasma-red hover:bg-rasma-red/5"
         >
           {loading === "cancelada" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
           Cancelar

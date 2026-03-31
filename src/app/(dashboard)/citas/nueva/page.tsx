@@ -25,7 +25,7 @@ export default async function NuevaCitaPage({
     <div className="max-w-2xl mx-auto space-y-6">
       <Link
         href="/citas"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-4 w-4" /> Volver a citas
       </Link>

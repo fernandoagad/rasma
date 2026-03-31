@@ -71,11 +71,11 @@ export default async function CitaDetailPage({ params }: { params: Promise<{ id:
           {/* Info grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/40 border">
-              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-blue-100 text-blue-600 shrink-0">
+              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-zinc-100 text-rasma-dark shrink-0">
                 <Calendar className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Fecha</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Fecha</p>
                 <p className="text-sm font-semibold capitalize mt-0.5">
                   {dt.toLocaleDateString("es-CL", {
                     weekday: "long",
@@ -88,11 +88,11 @@ export default async function CitaDetailPage({ params }: { params: Promise<{ id:
             </div>
 
             <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/40 border">
-              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-purple-100 text-purple-600 shrink-0">
+              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-zinc-100 text-rasma-dark shrink-0">
                 <Clock className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Horario</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Horario</p>
                 <p className="text-sm font-semibold mt-0.5">
                   {dt.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
                   {" \u2013 "}
@@ -103,21 +103,21 @@ export default async function CitaDetailPage({ params }: { params: Promise<{ id:
             </div>
 
             <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/40 border">
-              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-green-100 text-green-600 shrink-0">
+              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-zinc-100 text-rasma-dark shrink-0">
                 <User className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Terapeuta</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Terapeuta</p>
                 <p className="text-sm font-semibold mt-0.5">{appointment.therapist.name}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/40 border">
-              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-orange-100 text-orange-600 shrink-0">
+              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-zinc-100 text-rasma-dark shrink-0">
                 <Users className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">Tipo de sesion</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Tipo de sesion</p>
                 <p className="text-sm font-semibold mt-0.5">{sessionTypeLabels[appointment.sessionType] || appointment.sessionType}</p>
               </div>
             </div>
@@ -132,8 +132,8 @@ export default async function CitaDetailPage({ params }: { params: Promise<{ id:
             <div className="flex items-center gap-3">
               <div className={`flex items-center justify-center h-11 w-11 rounded-full shrink-0 ${
                 appointment.modality === "online"
-                  ? "bg-rasma-teal/15 text-rasma-teal"
-                  : "bg-rasma-green/15 text-rasma-green"
+                  ? "bg-zinc-100 text-rasma-dark"
+                  : "bg-zinc-100 text-rasma-dark"
               }`}>
                 {appointment.modality === "online" ? (
                   <Video className="h-5 w-5" />
@@ -149,7 +149,7 @@ export default async function CitaDetailPage({ params }: { params: Promise<{ id:
                   <p className="text-xs text-muted-foreground mt-0.5">{appointment.location}</p>
                 )}
                 {appointment.modality === "online" && !appointment.meetingLink && (
-                  <p className="text-xs text-amber-600 mt-0.5">
+                  <p className="text-xs text-zinc-500 mt-0.5">
                     No se genero el link de reunion. Verifique que el terapeuta tenga Google Calendar conectado.
                   </p>
                 )}
@@ -158,7 +158,7 @@ export default async function CitaDetailPage({ params }: { params: Promise<{ id:
 
             {appointment.meetingLink && (
               <a href={appointment.meetingLink} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                <Button className="gap-2 bg-rasma-teal text-white hover:bg-rasma-teal/90">
+                <Button className="gap-2 bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90">
                   <Video className="h-4 w-4" />
                   Unirse a Google Meet
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -186,20 +186,20 @@ export default async function CitaDetailPage({ params }: { params: Promise<{ id:
 
       {/* Note reminder banner */}
       {appointment.status === "completada" && !appointment.sessionNote && (
-        <Card className="border-yellow-300 bg-yellow-50">
+        <Card className="border-rasma-dark bg-zinc-50">
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-10 w-10 rounded-full bg-yellow-100">
-                  <FileText className="h-5 w-5 text-yellow-700" />
+                <div className="flex items-center justify-center h-10 w-10 rounded-full bg-rasma-dark/10">
+                  <FileText className="h-5 w-5 text-rasma-dark" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-yellow-900">Nota clinica pendiente</p>
-                  <p className="text-xs text-yellow-700">Esta cita fue completada pero no tiene nota clinica asociada.</p>
+                  <p className="text-sm font-semibold text-rasma-dark">Nota clinica pendiente</p>
+                  <p className="text-xs text-zinc-500">Esta cita fue completada pero no tiene nota clinica asociada.</p>
                 </div>
               </div>
               <Link href={`/notas/nueva?appointmentId=${appointment.id}`}>
-                <Button size="sm" className="bg-yellow-700 text-white hover:bg-yellow-800 gap-1.5">
+                <Button size="sm" className="bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90 gap-1.5">
                   <FileText className="h-3.5 w-3.5" />
                   Escribir nota
                 </Button>

@@ -210,12 +210,12 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
       <Card>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">1</div>
-            <h3 className="font-semibold text-sm">Paciente</h3>
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-rasma-dark text-rasma-lime text-sm font-bold">1</div>
+            <h3 className="font-bold text-base">Paciente</h3>
           </div>
 
           {selectedPatient ? (
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-rasma-teal/5 border-rasma-teal/20">
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-zinc-50 border-border">
               <div className="flex items-center gap-3">
                 <AvatarInitials name={`${selectedPatient.firstName} ${selectedPatient.lastName}`} size="sm" />
                 <div>
@@ -272,8 +272,8 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
       <Card>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">2</div>
-            <h3 className="font-semibold text-sm">
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-rasma-dark text-rasma-lime text-sm font-bold">2</div>
+            <h3 className="font-bold text-base">
               {userRole === "terapeuta" ? "Tipo de sesion" : "Terapeuta y tipo de sesion"}
             </h3>
           </div>
@@ -316,7 +316,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
                     className={cn(
                       "flex flex-col items-center gap-1.5 p-3 rounded-lg border text-xs font-medium transition-all",
                       sessionType === type.value
-                        ? "border-rasma-teal bg-rasma-teal/10 text-rasma-dark"
+                        ? "border-rasma-dark bg-rasma-dark text-white"
                         : "border-muted hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground"
                     )}
                   >
@@ -334,8 +334,8 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
       <Card>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">3</div>
-            <h3 className="font-semibold text-sm">Fecha y hora</h3>
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-rasma-dark text-rasma-lime text-sm font-bold">3</div>
+            <h3 className="font-bold text-base">Fecha y hora</h3>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6">
@@ -355,7 +355,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
 
                 <div className="grid grid-cols-7 gap-0.5 mb-1">
                   {DAY_NAMES.map((d) => (
-                    <div key={d} className="text-center text-[10px] font-medium text-muted-foreground py-1">
+                    <div key={d} className="text-center text-xs font-bold text-muted-foreground py-1">
                       {d}
                     </div>
                   ))}
@@ -381,7 +381,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
                             "h-8 w-full rounded-md text-xs font-medium transition-all",
                             past && "text-muted-foreground/30 cursor-not-allowed",
                             !past && !isSelected && "hover:bg-muted",
-                            isToday && !isSelected && "text-rasma-teal font-bold",
+                            isToday && !isSelected && "text-rasma-dark font-bold",
                             isSelected && "bg-rasma-dark text-rasma-lime"
                           )}
                         >
@@ -404,7 +404,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wider mb-1.5">Mañana</p>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Mañana</p>
                     <div className="grid grid-cols-4 gap-1.5">
                       {MORNING_TIMES.map((t) => (
                         <button
@@ -414,7 +414,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
                           className={cn(
                             "py-1.5 px-2 rounded-md border text-xs font-medium transition-all text-center",
                             selectedTime === t
-                              ? "border-rasma-teal bg-rasma-teal/10 text-rasma-dark"
+                              ? "border-rasma-dark bg-rasma-dark text-white"
                               : "border-muted hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground"
                           )}
                         >
@@ -425,7 +425,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wider mb-1.5">Tarde</p>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Tarde</p>
                     <div className="grid grid-cols-4 gap-1.5">
                       {AFTERNOON_TIMES.map((t) => (
                         <button
@@ -435,7 +435,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
                           className={cn(
                             "py-1.5 px-2 rounded-md border text-xs font-medium transition-all text-center",
                             selectedTime === t
-                              ? "border-rasma-teal bg-rasma-teal/10 text-rasma-dark"
+                              ? "border-rasma-dark bg-rasma-dark text-white"
                               : "border-muted hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground"
                           )}
                         >
@@ -463,7 +463,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
                     className={cn(
                       "py-2 px-3 rounded-md border text-xs font-medium transition-all text-center",
                       duration === opt.value
-                        ? "border-rasma-teal bg-rasma-teal/10 text-rasma-dark"
+                        ? "border-rasma-dark bg-rasma-dark text-white"
                         : "border-muted hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground"
                     )}
                   >
@@ -476,10 +476,10 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
 
           {/* Selected summary */}
           {selectedDate && selectedTime && (
-            <div className="mt-4 p-3 rounded-lg bg-rasma-teal/5 border border-rasma-teal/20">
+            <div className="mt-4 p-4 rounded-xl bg-rasma-dark text-white">
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-rasma-teal" />
-                <p className="text-sm font-medium">
+                <Calendar className="h-4 w-4 text-rasma-lime" />
+                <p className="text-sm font-semibold">
                   {selectedDate.toLocaleDateString("es-CL", {
                     weekday: "long",
                     day: "numeric",
@@ -492,45 +492,70 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
             </div>
           )}
 
-          {/* Recurring toggle */}
-          <div className="flex items-center justify-between mt-4 p-3 rounded-lg bg-muted/50">
-            <div className="flex items-center gap-2">
-              <Repeat className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Cita recurrente</p>
-                <p className="text-xs text-muted-foreground">Repetir semanalmente</p>
-              </div>
-            </div>
-            <Switch
-              checked={isRecurring}
-              onCheckedChange={setIsRecurring}
-            />
-          </div>
+        </CardContent>
+      </Card>
 
-          {isRecurring && (
-            <div className="mt-3 pl-9">
-              <Label className="text-xs text-muted-foreground mb-1.5">Repetir por</Label>
+      {/* ─── RECURRING: Big, unmissable card ─── */}
+      <div className={cn(
+        "rounded-lg border-2 p-6 transition-all",
+        isRecurring
+          ? "border-rasma-dark bg-zinc-50"
+          : "border border-border bg-white"
+      )}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              "h-12 w-12 rounded-xl flex items-center justify-center shrink-0 transition-colors",
+              isRecurring ? "bg-rasma-dark text-white" : "bg-rasma-gray-200 text-rasma-gray-700"
+            )}>
+              <Repeat className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-rasma-dark">Cita recurrente</p>
+              <p className="text-sm text-muted-foreground">
+                {isRecurring
+                  ? "Esta cita se repetira automaticamente cada semana"
+                  : "Activar para repetir esta cita semanalmente"
+                }
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={isRecurring}
+            onCheckedChange={setIsRecurring}
+            className="scale-125"
+          />
+        </div>
+
+        {isRecurring && (
+          <div className="mt-5 pt-5 border-t-2 border-zinc-200">
+            <div className="flex items-center gap-4 flex-wrap">
+              <Label className="text-sm font-bold text-rasma-dark">Repetir por</Label>
               <Select defaultValue="4">
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-48 h-11 border-zinc-300 bg-white text-base font-medium">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {[2, 4, 6, 8, 10, 12].map((w) => (
-                    <SelectItem key={w} value={String(w)}>{w} semanas</SelectItem>
+                    <SelectItem key={w} value={String(w)}>{w} semanas ({w} sesiones)</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div className="mt-3 flex items-center gap-2 text-sm text-rasma-dark font-medium">
+              <Calendar className="h-4 w-4" />
+              <span>Se crearan multiples citas con el mismo horario y configuracion</span>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Step 4: Modality */}
       <Card>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">4</div>
-            <h3 className="font-semibold text-sm">Modalidad</h3>
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-rasma-dark text-rasma-lime text-sm font-bold">4</div>
+            <h3 className="font-bold text-base">Modalidad</h3>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -538,15 +563,15 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
               type="button"
               onClick={() => setModality("presencial")}
               className={cn(
-                "flex items-center gap-3 p-4 rounded-xl border-2 transition-all",
+                "flex items-center gap-3 p-5 rounded-xl border-2 transition-all",
                 modality === "presencial"
-                  ? "border-rasma-green bg-rasma-green/5"
+                  ? "border-rasma-dark bg-rasma-dark text-white"
                   : "border-muted hover:border-muted-foreground/30"
               )}
             >
               <div className={cn(
-                "flex items-center justify-center h-10 w-10 rounded-full",
-                modality === "presencial" ? "bg-rasma-green/15 text-rasma-green" : "bg-muted text-muted-foreground"
+                "flex items-center justify-center h-11 w-11 rounded-full",
+                modality === "presencial" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
               )}>
                 <MapPin className="h-5 w-5" />
               </div>
@@ -560,15 +585,15 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
               type="button"
               onClick={() => setModality("online")}
               className={cn(
-                "flex items-center gap-3 p-4 rounded-xl border-2 transition-all",
+                "flex items-center gap-3 p-5 rounded-xl border-2 transition-all",
                 modality === "online"
-                  ? "border-rasma-teal bg-rasma-teal/5"
+                  ? "border-rasma-dark bg-rasma-dark text-white"
                   : "border-muted hover:border-muted-foreground/30"
               )}
             >
               <div className={cn(
-                "flex items-center justify-center h-10 w-10 rounded-full",
-                modality === "online" ? "bg-rasma-teal/15 text-rasma-teal" : "bg-muted text-muted-foreground"
+                "flex items-center justify-center h-11 w-11 rounded-full",
+                modality === "online" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
               )}>
                 <Video className="h-5 w-5" />
               </div>
@@ -587,9 +612,9 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
           )}
 
           {modality === "online" && (
-            <div className="mt-4 p-3 rounded-lg bg-rasma-teal/5 border border-rasma-teal/20">
+            <div className="mt-4 p-3 rounded-lg bg-zinc-50 border border-border">
               <div className="flex items-center gap-2">
-                <Video className="h-4 w-4 text-rasma-teal" />
+                <Video className="h-4 w-4 text-rasma-dark" />
                 <p className="text-sm text-rasma-dark font-medium">Link de Google Meet se generara automaticamente</p>
               </div>
               <p className="text-xs text-muted-foreground mt-1 ml-6">
@@ -604,8 +629,8 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
       <Card>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">5</div>
-            <h3 className="font-semibold text-sm">Valor de la sesion (opcional)</h3>
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-rasma-dark text-rasma-lime text-sm font-bold">5</div>
+            <h3 className="font-bold text-base">Valor de la sesion (opcional)</h3>
           </div>
           <div className="max-w-xs">
             <Label className="text-xs text-muted-foreground mb-1.5">Precio en CLP</Label>
@@ -620,7 +645,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
                 className="pl-7"
               />
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">Se usara para generar el cobro correspondiente</p>
+            <p className="text-xs text-muted-foreground mt-1">Se usara para generar el cobro correspondiente</p>
           </div>
         </CardContent>
       </Card>
@@ -629,8 +654,8 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
       <Card>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">6</div>
-            <h3 className="font-semibold text-sm">Notas (opcional)</h3>
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-rasma-dark text-rasma-lime text-sm font-bold">6</div>
+            <h3 className="font-bold text-base">Notas (opcional)</h3>
           </div>
           <Textarea
             name="notes"
@@ -643,7 +668,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
 
       {/* Error */}
       {state?.error && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+        <div className="p-3 rounded-lg border border-rasma-dark bg-zinc-50 text-sm text-rasma-dark">
           {state.error}
         </div>
       )}
@@ -653,7 +678,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
         <Button
           type="button"
           variant="outline"
-          className="flex-1"
+          className="flex-1 h-12 text-base font-semibold rounded-xl"
           onClick={() => router.back()}
         >
           Cancelar
@@ -661,16 +686,16 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
         <Button
           type="submit"
           disabled={pending || !patientId || !therapistId || !dateTimeValue}
-          className="flex-1 bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90"
+          className="flex-1 h-12 text-base font-bold rounded-xl bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90"
         >
           {pending ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               Creando cita...
             </>
           ) : (
             <>
-              <Calendar className="mr-2 h-4 w-4" />
+              <Calendar className="mr-2 h-5 w-5" />
               Crear Cita
             </>
           )}

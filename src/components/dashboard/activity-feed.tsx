@@ -1,4 +1,4 @@
-import { Users, Calendar, CreditCard, FileText, ClipboardList, UserCog, Settings, LogIn, Pencil, Trash2, type LucideIcon } from "lucide-react";
+import { Users, Calendar, CreditCard, FileText, ClipboardList, UserCog, Settings, LogIn, type LucideIcon } from "lucide-react";
 
 type ActivityRow = {
   id: string;
@@ -29,26 +29,26 @@ const entityLabels: Record<string, string> = {
   treatment_plan: "plan",
   user: "usuario",
   settings: "config",
-  auth: "sesión",
+  auth: "sesion",
 };
 
 const actionLabels: Record<string, string> = {
-  create: "creó",
-  update: "editó",
-  delete: "eliminó",
-  view: "vió",
-  login: "ingresó",
-  logout: "salió",
-  password_reset: "restableció clave",
-  email_change: "cambió correo",
+  create: "creo",
+  update: "edito",
+  delete: "elimino",
+  view: "vio",
+  login: "ingreso",
+  logout: "salio",
+  password_reset: "restablecio clave",
+  email_change: "cambio correo",
 };
 
 const actionColors: Record<string, string> = {
-  create: "bg-emerald-100 text-emerald-600",
-  update: "bg-blue-100 text-blue-600",
-  delete: "bg-red-100 text-red-500",
-  login: "bg-gray-100 text-gray-500",
-  logout: "bg-gray-100 text-gray-500",
+  create: "bg-rasma-dark text-white",
+  update: "bg-rasma-dark text-white",
+  delete: "bg-rasma-dark text-white",
+  login: "bg-rasma-dark text-white",
+  logout: "bg-rasma-dark text-white",
 };
 
 function formatRelativeTime(date: Date): string {
@@ -72,36 +72,36 @@ interface ActivityFeedProps {
 export function ActivityFeed({ activities }: ActivityFeedProps) {
   if (activities.length === 0) {
     return (
-      <p className="text-xs text-muted-foreground py-4 text-center">
+      <p className="text-sm text-muted-foreground py-6 text-center">
         Sin actividad reciente.
       </p>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-0.5">
       {activities.map((activity) => {
         const Icon = entityIcons[activity.entityType] || FileText;
         const actionText = actionLabels[activity.action] || activity.action;
         const entityText = entityLabels[activity.entityType] || activity.entityType;
-        const colorClass = actionColors[activity.action] || "bg-muted text-muted-foreground";
+        const colorClass = actionColors[activity.action] || "bg-rasma-dark text-white";
 
         return (
           <div
             key={activity.id}
-            className="flex items-center gap-2.5 py-1.5"
+            className="flex items-center gap-3 py-2"
           >
-            <div className={`h-5 w-5 rounded-md flex items-center justify-center shrink-0 ${colorClass}`}>
-              <Icon className="h-2.5 w-2.5" />
+            <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${colorClass}`}>
+              <Icon className="h-3.5 w-3.5" />
             </div>
-            <p className="text-[11px] flex-1 min-w-0 truncate">
-              <span className="font-medium text-foreground/80">{activity.userName || "Sistema"}</span>
+            <p className="text-sm flex-1 min-w-0 truncate">
+              <span className="font-semibold text-rasma-dark">{activity.userName || "Sistema"}</span>
               {" "}
               <span className="text-muted-foreground">
                 {actionText} {entityText}
               </span>
             </p>
-            <span className="text-[10px] text-muted-foreground/60 tabular-nums shrink-0">
+            <span className="text-xs text-muted-foreground tabular-nums shrink-0 font-medium">
               {formatRelativeTime(activity.createdAt)}
             </span>
           </div>

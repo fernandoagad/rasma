@@ -113,11 +113,11 @@ export function AppointmentsList({ appointments, totalPages, currentPage, filter
             {/* Date header */}
             <div className="flex items-center gap-3 mb-3">
               {dayIsToday && (
-                <span className="flex h-2 w-2 rounded-full bg-rasma-teal animate-pulse" />
+                <span className="flex h-2 w-2 rounded-full bg-rasma-dark animate-pulse" />
               )}
               <h3 className={cn(
                 "text-sm font-semibold capitalize",
-                dayIsToday ? "text-rasma-teal" : "text-muted-foreground"
+                dayIsToday ? "text-rasma-dark" : "text-muted-foreground"
               )}>
                 {relativeLabel ? `${relativeLabel} — ` : ""}{dateLabel}
               </h3>
@@ -146,18 +146,18 @@ export function AppointmentsList({ appointments, totalPages, currentPage, filter
                         {/* Left time strip */}
                         <div className={cn(
                           "flex flex-col items-center justify-center w-[100px] shrink-0 border-r py-3",
-                          appt.status === "completada" && "bg-green-50",
-                          appt.status === "programada" && "bg-blue-50",
-                          appt.status === "cancelada" && "bg-red-50",
-                          appt.status === "no_asistio" && "bg-yellow-50",
+                          appt.status === "completada" && "bg-zinc-50",
+                          appt.status === "programada" && "bg-zinc-50",
+                          appt.status === "cancelada" && "bg-zinc-50",
+                          appt.status === "no_asistio" && "bg-zinc-50",
                         )}>
                           <p className="text-base font-bold text-rasma-dark leading-none">
                             {dt.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })}
                           </p>
-                          <p className="text-[10px] text-muted-foreground mt-1.5">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {endTime.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })}
                           </p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                          <p className="text-xs text-muted-foreground mt-0.5 font-medium">
                             {appt.durationMinutes} min
                           </p>
                         </div>
@@ -189,7 +189,7 @@ export function AppointmentsList({ appointments, totalPages, currentPage, filter
                                 href={appt.meetingLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rasma-teal/10 text-rasma-teal text-xs font-medium hover:bg-rasma-teal/20 transition-colors"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rasma-dark text-rasma-lime text-xs font-semibold hover:bg-rasma-dark/90 transition-colors"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <Video className="h-3.5 w-3.5" />
@@ -242,19 +242,19 @@ export function AppointmentsList({ appointments, totalPages, currentPage, filter
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
                                       onClick={() => handleStatusChange(appt.id, "completada")}
-                                      className="cursor-pointer text-green-700 focus:text-green-700"
+                                      className="cursor-pointer text-rasma-dark focus:text-rasma-dark"
                                     >
                                       <CheckCircle className="mr-2 h-4 w-4" /> Marcar completada
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       onClick={() => handleStatusChange(appt.id, "no_asistio")}
-                                      className="cursor-pointer text-yellow-700 focus:text-yellow-700"
+                                      className="cursor-pointer text-zinc-500 focus:text-zinc-500"
                                     >
                                       <AlertTriangle className="mr-2 h-4 w-4" /> No asistio
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       onClick={() => handleStatusChange(appt.id, "cancelada")}
-                                      className="cursor-pointer text-red-600 focus:text-red-600"
+                                      className="cursor-pointer text-rasma-red focus:text-rasma-red"
                                     >
                                       <XCircle className="mr-2 h-4 w-4" /> Cancelar cita
                                     </DropdownMenuItem>

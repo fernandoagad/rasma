@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import { UI } from "@/constants/ui";
 import Link from "next/link";
 
@@ -34,15 +35,15 @@ export function LoginForm() {
   }, [state?.success, router]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Google Sign In */}
       <form action={googleSignInAction}>
         <Button
           type="submit"
           variant="outline"
-          className="w-full font-medium"
+          className="w-full font-semibold h-12 text-base rounded-xl"
         >
-          <GoogleIcon className="mr-2 h-5 w-5" />
+          <GoogleIcon className="mr-2.5 h-5 w-5" />
           {UI.auth.loginWithGoogle}
         </Button>
       </form>
@@ -51,23 +52,23 @@ export function LoginForm() {
         <div className="absolute inset-0 flex items-center">
           <Separator className="w-full" />
         </div>
-        <div className="relative flex justify-center text-xs">
-          <span className="bg-white px-2 text-muted-foreground">
+        <div className="relative flex justify-center text-sm">
+          <span className="bg-white px-3 text-muted-foreground">
             {UI.auth.orContinueWith}
           </span>
         </div>
       </div>
 
       {/* Credentials form */}
-      <form action={formAction} className="space-y-4">
+      <form action={formAction} className="space-y-5">
         {state?.error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700 font-medium">
             {state.error}
           </div>
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="email">
+          <Label htmlFor="email" className="text-sm font-semibold">
             {UI.auth.email}
           </Label>
           <Input
@@ -77,11 +78,12 @@ export function LoginForm() {
             placeholder="correo@ejemplo.com"
             required
             autoComplete="email"
+            className="h-12 text-base rounded-xl px-4"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password">
+          <Label htmlFor="password" className="text-sm font-semibold">
             {UI.auth.password}
           </Label>
           <Input
@@ -90,21 +92,29 @@ export function LoginForm() {
             type="password"
             required
             autoComplete="current-password"
+            className="h-12 text-base rounded-xl px-4"
           />
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <Checkbox id="rememberMe" name="rememberMe" defaultChecked />
+          <Label htmlFor="rememberMe" className="text-sm text-muted-foreground cursor-pointer select-none">
+            Recordarme en este dispositivo
+          </Label>
         </div>
 
         <Button
           type="submit"
           disabled={isPending}
-          className="w-full bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90 font-semibold"
+          className="w-full h-12 text-base bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90 font-bold rounded-xl"
         >
           {isPending ? UI.common.loading : UI.auth.loginButton}
         </Button>
 
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3 pt-1">
           <Link
             href="/recuperar"
-            className="text-sm text-rasma-teal hover:text-rasma-teal/80 transition-colors block"
+            className="text-sm text-rasma-teal hover:text-rasma-teal/80 transition-colors block font-medium"
           >
             {UI.auth.forgotPassword}
           </Link>
@@ -112,7 +122,7 @@ export function LoginForm() {
             <span className="text-sm text-muted-foreground">¿No tiene cuenta? </span>
             <Link
               href="/registro"
-              className="text-sm text-rasma-teal hover:text-rasma-teal/80 transition-colors font-medium"
+              className="text-sm text-rasma-teal hover:text-rasma-teal/80 transition-colors font-bold"
             >
               Crear cuenta
             </Link>

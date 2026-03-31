@@ -57,12 +57,12 @@ export function PlanForm({ patients }: Props) {
       <Card>
         <CardContent className="pt-2">
           <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">1</div>
-            <h3 className="font-semibold text-sm">Paciente</h3>
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-rasma-dark text-rasma-lime text-sm font-bold">1</div>
+            <h3 className="font-bold text-base">Paciente</h3>
           </div>
 
           {selectedPatient ? (
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-rasma-teal/5 border-rasma-teal/20">
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-zinc-50 border-border">
               <div className="flex items-center gap-3">
                 <AvatarInitials name={`${selectedPatient.firstName} ${selectedPatient.lastName}`} size="sm" />
                 <div>
@@ -117,18 +117,18 @@ export function PlanForm({ patients }: Props) {
       <Card>
         <CardContent className="pt-2">
           <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">2</div>
-            <h3 className="font-semibold text-sm">Diagnostico</h3>
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-rasma-dark text-rasma-lime text-sm font-bold">2</div>
+            <h3 className="font-bold text-base">Diagnostico</h3>
           </div>
 
-          <div className="rounded-xl border p-4 border-red-200 focus-within:border-red-400 transition-colors">
+          <div className="rounded-xl border p-4 border-zinc-200 focus-within:border-rasma-dark transition-colors">
             <div className="flex items-center gap-2 mb-2">
-              <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-red-100">
-                <Stethoscope className="h-4 w-4 text-red-600" />
+              <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-rasma-dark">
+                <Stethoscope className="h-4 w-4 text-white" />
               </div>
               <div>
                 <Label className="text-sm font-semibold">Diagnostico clinico</Label>
-                <p className="text-[10px] text-muted-foreground">Diagnostico principal y comorbilidades</p>
+                <p className="text-xs text-muted-foreground">Diagnostico principal y comorbilidades</p>
               </div>
             </div>
             <Textarea
@@ -145,19 +145,19 @@ export function PlanForm({ patients }: Props) {
       <Card>
         <CardContent className="pt-2">
           <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">3</div>
-            <h3 className="font-semibold text-sm">Objetivos e Intervenciones</h3>
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-rasma-dark text-rasma-lime text-sm font-bold">3</div>
+            <h3 className="font-bold text-base">Objetivos e Intervenciones</h3>
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-xl border p-4 border-blue-200 focus-within:border-blue-400 transition-colors">
+            <div className="rounded-xl border p-4 border-zinc-200 focus-within:border-rasma-dark transition-colors">
               <div className="flex items-center gap-2 mb-2">
-                <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-blue-100">
-                  <Target className="h-4 w-4 text-blue-600" />
+                <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-rasma-dark">
+                  <Target className="h-4 w-4 text-white" />
                 </div>
                 <div>
                   <Label className="text-sm font-semibold">Objetivos terapeuticos</Label>
-                  <p className="text-[10px] text-muted-foreground">Metas a corto y largo plazo</p>
+                  <p className="text-xs text-muted-foreground">Metas a corto y largo plazo</p>
                 </div>
               </div>
               <Textarea
@@ -168,14 +168,14 @@ export function PlanForm({ patients }: Props) {
               />
             </div>
 
-            <div className="rounded-xl border p-4 border-green-200 focus-within:border-green-400 transition-colors">
+            <div className="rounded-xl border p-4 border-zinc-200 focus-within:border-rasma-dark transition-colors">
               <div className="flex items-center gap-2 mb-2">
-                <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-green-100">
-                  <Lightbulb className="h-4 w-4 text-green-600" />
+                <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-rasma-dark">
+                  <Lightbulb className="h-4 w-4 text-white" />
                 </div>
                 <div>
                   <Label className="text-sm font-semibold">Intervenciones planificadas</Label>
-                  <p className="text-[10px] text-muted-foreground">Estrategias y tecnicas a utilizar</p>
+                  <p className="text-xs text-muted-foreground">Estrategias y tecnicas a utilizar</p>
                 </div>
               </div>
               <Textarea
@@ -193,8 +193,8 @@ export function PlanForm({ patients }: Props) {
       <Card>
         <CardContent className="pt-2">
           <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center justify-center h-6 w-6 rounded-full bg-rasma-dark text-rasma-lime text-xs font-bold">4</div>
-            <h3 className="font-semibold text-sm">Fechas</h3>
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-rasma-dark text-rasma-lime text-sm font-bold">4</div>
+            <h3 className="font-bold text-base">Fechas</h3>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -223,7 +223,7 @@ export function PlanForm({ patients }: Props) {
 
       {/* Error */}
       {state?.error && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+        <div className="p-3 rounded-lg border border-rasma-dark bg-zinc-50 text-sm text-rasma-dark">
           {state.error}
         </div>
       )}
@@ -233,7 +233,7 @@ export function PlanForm({ patients }: Props) {
         <Button
           type="button"
           variant="outline"
-          className="flex-1"
+          className="flex-1 h-12 text-base font-semibold rounded-xl"
           onClick={() => router.back()}
         >
           Cancelar
@@ -241,16 +241,16 @@ export function PlanForm({ patients }: Props) {
         <Button
           type="submit"
           disabled={pending || !patientId}
-          className="flex-1 bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90"
+          className="flex-1 h-12 text-base font-bold rounded-xl bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90"
         >
           {pending ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               Creando plan...
             </>
           ) : (
             <>
-              <ClipboardList className="mr-2 h-4 w-4" />
+              <ClipboardList className="mr-2 h-5 w-5" />
               Crear Plan de Tratamiento
             </>
           )}

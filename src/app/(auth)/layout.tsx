@@ -7,22 +7,22 @@ export default function AuthLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-rasma-gray-100">
-      <div className="w-full max-w-md px-4">
+      <div className="w-full max-w-md px-5">
         {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
+        <div className="flex flex-col items-center mb-10">
           <Image
             src="/logo-rasma.png"
             alt="RASMA"
-            width={56}
-            height={56}
-            className="rounded-xl"
+            width={72}
+            height={72}
+            className="rounded-lg shadow-sm"
             priority
           />
-          <h1 className="mt-3 text-xl font-bold text-rasma-dark tracking-tight">
-            Fundacion Rasma
+          <h1 className="mt-4 text-2xl font-bold text-rasma-dark tracking-tight">
+            Fundación Rasma
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Sistema de Gestion Clinica
+          <p className="text-base text-muted-foreground mt-1">
+            Sistema de Gestión Clínica
           </p>
         </div>
 

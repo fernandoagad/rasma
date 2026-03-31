@@ -75,66 +75,31 @@ export default async function DashboardPage() {
   const scheduledToday = todayAppts.filter((a) => a.status === "programada").length;
 
   return (
-    <div className="space-y-5 max-w-6xl mx-auto">
-      {/* ─── Header: greeting + date + actions ─── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-rasma-dark tracking-tight">
-            {getGreeting()}, {firstName}
-          </h1>
-          <p className="text-[13px] text-muted-foreground capitalize">{dateStr}</p>
-        </div>
-        <QuickActions userRole={role} />
+    <div className="space-y-6 max-w-6xl mx-auto">
+      {/* ─── Header: greeting + date ─── */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-rasma-dark tracking-tight">
+          {getGreeting()}, {firstName}
+        </h1>
+        <p className="text-base text-muted-foreground capitalize mt-1">{dateStr}</p>
       </div>
 
-      {/* ─── Stats row: inline mini cards ─── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <StatMini
-          label={role === "terapeuta" ? "Mis pacientes" : "Pacientes"}
-          value={stats.patientCount}
-          icon={<Users className="h-3.5 w-3.5 text-rasma-teal" />}
-          href="/pacientes"
-        />
-        <StatMini
-          label="Hoy"
-          value={stats.todayAppointments}
-          suffix={stats.todayAppointments === 1 ? "cita" : "citas"}
-          icon={<Calendar className="h-3.5 w-3.5 text-blue-500" />}
-          href="/citas"
-        />
+      {/* ─── Quick actions: big obvious cards ─── */}
+      <QuickActions userRole={role} />
+
+      {/* ─── Stats row: big, obvious cards ─── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatCard label={role === "terapeuta" ? "Mis pacientes" : "Pacientes"} value={stats.patientCount} icon={<Users className="h-4 w-4" />} href="/pacientes" />
+        <StatCard label="Citas hoy" value={stats.todayAppointments} icon={<Calendar className="h-4 w-4" />} href="/citas" />
         {(role === "admin" || role === "recepcionista" || role === "supervisor") ? (
-          <StatMini
-            label="Pagos pendientes"
-            value={stats.pendingPayments}
-            icon={<CreditCard className="h-3.5 w-3.5 text-rasma-red" />}
-            href="/pagos"
-            alert={stats.pendingPayments > 0}
-          />
+          <StatCard label="Pagos pendientes" value={stats.pendingPayments} icon={<CreditCard className="h-4 w-4" />} href="/pagos" alert={stats.pendingPayments > 0} />
         ) : (
-          <StatMini
-            label="Completadas"
-            value={stats.completedThisWeek}
-            suffix="esta semana"
-            icon={<CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
-            href="/citas"
-          />
+          <StatCard label="Completadas esta semana" value={stats.completedThisWeek} icon={<CheckCircle2 className="h-4 w-4" />} href="/citas" />
         )}
         {(role === "terapeuta" || role === "supervisor" || role === "admin") ? (
-          <StatMini
-            label="Notas pendientes"
-            value={stats.pendingNotes}
-            icon={<FileText className="h-3.5 w-3.5 text-amber-500" />}
-            href="/notas"
-            alert={stats.pendingNotes > 0}
-          />
+          <StatCard label="Notas pendientes" value={stats.pendingNotes} icon={<FileText className="h-4 w-4" />} href="/notas" alert={stats.pendingNotes > 0} />
         ) : (
-          <StatMini
-            label="Semana"
-            value={stats.weekAppointments}
-            suffix="citas"
-            icon={<CalendarDays className="h-3.5 w-3.5 text-rasma-teal" />}
-            href="/calendario"
-          />
+          <StatCard label="Citas esta semana" value={stats.weekAppointments} icon={<CalendarDays className="h-4 w-4" />} href="/calendario" />
         )}
       </div>
 
@@ -150,52 +115,48 @@ export default async function DashboardPage() {
           {/* Alert banners */}
           {stats.pendingNotes > 0 && (role === "terapeuta" || role === "supervisor" || role === "admin") && (
             <Link href="/notas" className="block group">
-              <div className="flex items-center gap-3 rounded-xl border border-amber-200/80 bg-amber-50/60 px-3.5 py-2.5 transition-colors group-hover:border-amber-300">
-                <div className="h-7 w-7 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
-                  <FileText className="h-3.5 w-3.5 text-amber-600" />
-                </div>
-                <p className="text-xs flex-1">
-                  <span className="font-semibold text-amber-900">
+              <div className="flex items-center gap-3 rounded-md border border-border px-4 py-3 transition-colors group-hover:bg-zinc-50">
+                <FileText className="h-4 w-4 text-rasma-dark shrink-0" />
+                <p className="text-sm flex-1">
+                  <span className="font-bold text-rasma-dark">
                     {stats.pendingNotes} {stats.pendingNotes === 1 ? "nota pendiente" : "notas pendientes"}
                   </span>
-                  <span className="text-amber-700 ml-1">— citas completadas sin nota de sesión</span>
+                  <span className="text-zinc-500 ml-1">— citas completadas sin nota de sesión</span>
                 </p>
-                <ArrowRight className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                <ArrowRight className="h-4 w-4 text-zinc-400 shrink-0" />
               </div>
             </Link>
           )}
 
           {stats.pendingPayments > 0 && (role === "admin" || role === "recepcionista" || role === "supervisor") && (
             <Link href="/pagos" className="block group">
-              <div className="flex items-center gap-3 rounded-xl border border-red-200/80 bg-red-50/60 px-3.5 py-2.5 transition-colors group-hover:border-red-300">
-                <div className="h-7 w-7 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
-                  <CreditCard className="h-3.5 w-3.5 text-rasma-red" />
-                </div>
-                <p className="text-xs flex-1">
-                  <span className="font-semibold text-red-900">
+              <div className="flex items-center gap-3 rounded-md border border-border px-4 py-3 transition-colors group-hover:bg-zinc-50">
+                <CreditCard className="h-4 w-4 text-rasma-dark shrink-0" />
+                <p className="text-sm flex-1">
+                  <span className="font-bold text-rasma-dark">
                     {stats.pendingPayments} {stats.pendingPayments === 1 ? "pago pendiente" : "pagos pendientes"}
                   </span>
-                  <span className="text-red-700 ml-1">— requieren atención</span>
+                  <span className="text-zinc-500 ml-1">— requieren atención</span>
                 </p>
-                <ArrowRight className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                <ArrowRight className="h-4 w-4 text-zinc-400 shrink-0" />
               </div>
             </Link>
           )}
 
           {/* Today's full schedule */}
           <Card className="overflow-hidden py-0 gap-0">
-            <CardHeader className="py-2.5 px-4 border-b bg-muted/30">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <CardHeader className="py-3.5 px-5 border-b bg-muted/30">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
                 Agenda de hoy
                 {todayAppts.length > 0 && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-normal text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5 text-sm font-normal text-muted-foreground">
                     &middot;
                     {completedToday > 0 && (
-                      <span className="text-emerald-600">{completedToday} completada{completedToday > 1 ? "s" : ""}</span>
+                      <span className="font-medium">{completedToday} completada{completedToday > 1 ? "s" : ""}</span>
                     )}
                     {completedToday > 0 && scheduledToday > 0 && ", "}
                     {scheduledToday > 0 && (
-                      <span>{scheduledToday} pendiente{scheduledToday > 1 ? "s" : ""}</span>
+                      <span className="font-medium">{scheduledToday} pendiente{scheduledToday > 1 ? "s" : ""}</span>
                     )}
                   </span>
                 )}
@@ -203,13 +164,13 @@ export default async function DashboardPage() {
               <CardAction>
                 <Link
                   href="/calendario"
-                  className="text-[11px] font-medium text-rasma-teal hover:underline flex items-center gap-0.5"
+                  className="text-sm font-semibold text-rasma-dark hover:underline flex items-center gap-1"
                 >
-                  Calendario <ArrowRight className="h-3 w-3" />
+                  Ver calendario <ArrowRight className="h-4 w-4" />
                 </Link>
               </CardAction>
             </CardHeader>
-            <CardContent className="p-3">
+            <CardContent className="p-4">
               <TodaySchedule appointments={todaySerialized} userRole={role} />
             </CardContent>
           </Card>
@@ -219,16 +180,16 @@ export default async function DashboardPage() {
         <div className="lg:col-span-5 xl:col-span-4 space-y-3">
           {/* Progress this week */}
           {stats.weekAppointments > 0 && (
-            <div className="rounded-xl border bg-background px-3.5 py-3">
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-xs font-semibold text-foreground/80">Progreso semanal</p>
-                <p className="text-[11px] text-muted-foreground tabular-nums">
-                  {stats.completedThisWeek}/{stats.weekAppointments}
+            <div className="rounded-lg border bg-white px-5 py-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-bold text-rasma-dark">Progreso semanal</p>
+                <p className="text-sm text-muted-foreground tabular-nums font-medium">
+                  {stats.completedThisWeek} de {stats.weekAppointments}
                 </p>
               </div>
-              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div className="h-2.5 rounded-full bg-muted overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-rasma-teal transition-all"
+                  className="h-full rounded-full bg-rasma-dark transition-all"
                   style={{
                     width: `${Math.min(100, Math.round((stats.completedThisWeek / stats.weekAppointments) * 100))}%`,
                   }}
@@ -239,20 +200,20 @@ export default async function DashboardPage() {
 
           {/* Upcoming */}
           <Card className="overflow-hidden py-0 gap-0">
-            <CardHeader className="py-2.5 px-4 border-b bg-muted/30">
-              <CardTitle className="text-sm font-semibold">Próximas citas</CardTitle>
+            <CardHeader className="py-3.5 px-5 border-b bg-muted/30">
+              <CardTitle className="text-base font-bold">Próximas citas</CardTitle>
             </CardHeader>
-            <CardContent className="p-3">
+            <CardContent className="p-4">
               <UpcomingAppointments appointments={upcoming} />
             </CardContent>
           </Card>
 
           {/* Activity */}
           <Card className="overflow-hidden py-0 gap-0">
-            <CardHeader className="py-2.5 px-4 border-b bg-muted/30">
-              <CardTitle className="text-sm font-semibold">Actividad</CardTitle>
+            <CardHeader className="py-3.5 px-5 border-b bg-muted/30">
+              <CardTitle className="text-base font-bold">Actividad</CardTitle>
             </CardHeader>
-            <CardContent className="px-3 py-2">
+            <CardContent className="px-4 py-3">
               <ActivityFeed activities={activities} />
             </CardContent>
           </Card>
@@ -264,31 +225,29 @@ export default async function DashboardPage() {
 
 /* ─── Helper components ─── */
 
-function StatMini({
+function StatCard({
   label,
   value,
-  suffix,
   icon,
   href,
   alert,
 }: {
   label: string;
   value: number;
-  suffix?: string;
   icon: React.ReactNode;
   href: string;
   alert?: boolean;
 }) {
   return (
     <Link href={href} className="group">
-      <div className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 h-[52px] transition-all group-hover:shadow-sm group-hover:border-border ${
-        alert ? "border-amber-200 bg-amber-50/40" : "bg-background"
+      <div className={`rounded-md border bg-white p-4 transition-colors group-hover:bg-zinc-50 ${
+        alert ? "border-rasma-dark" : ""
       }`}>
-        <div className="shrink-0">{icon}</div>
-        <div className="min-w-0">
-          <p className="text-lg font-bold text-rasma-dark leading-none tabular-nums">{value}</p>
-          <p className="text-[10px] text-muted-foreground truncate mt-0.5 leading-none">{label}</p>
+        <div className="flex items-center gap-2 text-zinc-500 mb-1">
+          {icon}
+          <p className="text-sm truncate">{label}</p>
         </div>
+        <p className="text-2xl font-bold text-rasma-dark leading-none tabular-nums">{value}</p>
       </div>
     </Link>
   );

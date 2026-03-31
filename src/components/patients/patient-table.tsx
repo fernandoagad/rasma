@@ -142,7 +142,7 @@ export function PatientTable({ patients, therapists = [], userRole }: { patients
     <div className="space-y-3">
       {/* Bulk actions bar */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 rounded-xl border border-rasma-teal/30 bg-rasma-teal/5 px-4 py-2.5 flex-wrap">
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-zinc-50 px-4 py-2.5 flex-wrap">
           <span className="text-sm font-medium">
             {selectedIds.size} {UI.bulk.selected}
           </span>
@@ -248,7 +248,7 @@ export function PatientTable({ patients, therapists = [], userRole }: { patients
                   key={patient.id}
                   className={cn(
                     "transition-colors",
-                    isSelected && "bg-rasma-teal/5 border-l-2 border-l-rasma-teal"
+                    isSelected && "bg-zinc-50 border-l-2 border-l-rasma-dark"
                   )}
                 >
                   <TableCell className="pl-4">
@@ -262,14 +262,14 @@ export function PatientTable({ patients, therapists = [], userRole }: { patients
                     <Link href={`/pacientes/${patient.id}`} className="flex items-center gap-2.5 group">
                       <AvatarInitials name={fullName} size="sm" />
                       <div className="min-w-0">
-                        <p className="font-medium text-sm group-hover:text-rasma-teal transition-colors truncate">
+                        <p className="font-medium text-sm group-hover:text-rasma-dark transition-colors truncate">
                           {fullName}
                           {patient.type === "externo" && (
-                            <Badge variant="info" className="ml-1.5 text-[9px] px-1 py-0">Externo</Badge>
+                            <Badge variant="info" className="ml-1.5 text-xs px-1.5 py-0">Externo</Badge>
                           )}
                         </p>
                         {patient.email && (
-                          <p className="text-[11px] text-muted-foreground truncate">{patient.email}</p>
+                          <p className="text-xs text-muted-foreground truncate">{patient.email}</p>
                         )}
                       </div>
                     </Link>
@@ -289,24 +289,24 @@ export function PatientTable({ patients, therapists = [], userRole }: { patients
                             {patient.teamCount}
                           </span>
                         ) : (
-                          <span className="text-xs text-muted-foreground/40">—</span>
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell className="hidden xl:table-cell">
                         {(patient.activePlans ?? 0) > 0 ? (
-                          <Badge variant="success" className="text-[10px] px-1.5">Activo</Badge>
+                          <Badge variant="success" className="text-xs px-1.5">Activo</Badge>
                         ) : (
-                          <span className="text-xs text-muted-foreground/40">—</span>
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         {patient.nextAppointment ? (
                           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                            <CalendarCheck className="h-3 w-3 text-rasma-teal" />
+                            <CalendarCheck className="h-3 w-3 text-rasma-dark" />
                             {formatShortDate(patient.nextAppointment)}
                           </span>
                         ) : (
-                          <span className="text-xs text-muted-foreground/40">—</span>
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell className="hidden xl:table-cell text-xs text-muted-foreground tabular-nums">

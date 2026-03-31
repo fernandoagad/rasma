@@ -63,8 +63,8 @@ export default async function CitasPage({
         subtitle={`${total} citas en total`}
         action={
           <Link href="/citas/nueva">
-            <Button className="bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90">
-              <Plus className="mr-2 h-4 w-4" />
+            <Button className="h-11 px-5 text-base font-semibold rounded-xl gap-2 bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90">
+              <Plus className="h-5 w-5" />
               Nueva Cita
             </Button>
           </Link>

@@ -6,10 +6,14 @@ import { getMpPayment } from "@/lib/mercadopago";
 import { notifyPaymentStatusChanged } from "@/lib/notifications";
 import crypto from "crypto";
 
-const WEBHOOK_SECRET = process.env.MERCADOPAGO_WEBHOOK_SECRET || "";
+const WEBHOOK_SECRET = process.env.MERCADOPAGO_WEBHOOK_SECRET;
 
 function verifySignature(req: NextRequest, body: string): boolean {
-  if (!WEBHOOK_SECRET) return true; // Skip verification in dev
+  // Never skip verification — require the secret to be configured
+  if (!WEBHOOK_SECRET) {
+    console.error("MERCADOPAGO_WEBHOOK_SECRET not configured — rejecting webhook");
+    return false;
+  }
 
   const xSignature = req.headers.get("x-signature") || "";
   const xRequestId = req.headers.get("x-request-id") || "";
@@ -33,7 +37,12 @@ function verifySignature(req: NextRequest, body: string): boolean {
   const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
   const hmac = crypto.createHmac("sha256", WEBHOOK_SECRET).update(manifest).digest("hex");
 
-  return hmac === v1;
+  // Constant-time comparison to prevent timing attacks
+  try {
+    return crypto.timingSafeEqual(Buffer.from(hmac, "hex"), Buffer.from(v1, "hex"));
+  } catch {
+    return false;
+  }
 }
 
 export async function POST(req: NextRequest) {

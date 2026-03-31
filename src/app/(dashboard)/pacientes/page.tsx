@@ -33,11 +33,11 @@ export default async function PacientesPage({
     <div className="space-y-6 max-w-7xl mx-auto">
       <PageHeader
         title={UI.patients.title}
-        subtitle={`${total} registrados`}
+        subtitle={`${total} pacientes registrados`}
         action={
           <Link href="/pacientes/nuevo">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
+            <Button className="h-11 px-5 text-base font-semibold rounded-xl gap-2">
+              <Plus className="h-5 w-5" />
               {UI.patients.newPatient}
             </Button>
           </Link>

@@ -43,10 +43,13 @@ export async function loginAction(
     return { error: parsed.error.issues[0].message };
   }
 
+  const rememberMe = formData.get("rememberMe") === "on";
+
   try {
     await signIn("credentials", {
       email: parsed.data.email.toLowerCase(),
       password: parsed.data.password,
+      rememberMe: rememberMe ? "true" : "false",
       redirect: false,
     });
 

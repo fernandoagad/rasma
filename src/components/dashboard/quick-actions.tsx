@@ -5,65 +5,33 @@ import {
   ClipboardList,
   CalendarDays,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface QuickActionsProps {
   userRole: string;
 }
 
 const actions = [
-  {
-    href: "/citas/nueva",
-    label: "Cita",
-    icon: Plus,
-    roles: ["admin", "terapeuta", "recepcionista", "supervisor"],
-    primary: true,
-  },
-  {
-    href: "/notas/nueva",
-    label: "Nota",
-    icon: FileText,
-    roles: ["admin", "terapeuta", "supervisor"],
-    primary: false,
-  },
-  {
-    href: "/planes/nuevo",
-    label: "Plan",
-    icon: ClipboardList,
-    roles: ["admin", "terapeuta", "supervisor"],
-    primary: false,
-  },
-  {
-    href: "/calendario",
-    label: "Calendario",
-    icon: CalendarDays,
-    roles: ["admin", "terapeuta", "recepcionista", "supervisor"],
-    primary: false,
-  },
+  { href: "/citas/nueva", label: "Nueva Cita", description: "Agendar sesion", icon: Plus, roles: ["admin", "terapeuta", "recepcionista", "supervisor"] },
+  { href: "/notas/nueva", label: "Nueva Nota", description: "Nota de sesion", icon: FileText, roles: ["admin", "terapeuta", "supervisor"] },
+  { href: "/planes/nuevo", label: "Nuevo Plan", description: "Plan de tratamiento", icon: ClipboardList, roles: ["admin", "terapeuta", "supervisor"] },
+  { href: "/calendario", label: "Ver Calendario", description: "Agenda completa", icon: CalendarDays, roles: ["admin", "terapeuta", "recepcionista", "supervisor"] },
 ];
 
 export function QuickActions({ userRole }: QuickActionsProps) {
   const visible = actions.filter((a) => a.roles.includes(userRole));
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       {visible.map((action) => (
-        <Button
-          key={action.href}
-          variant={action.primary ? "default" : "outline"}
-          size="sm"
-          className={`h-7 text-xs gap-1.5 rounded-lg ${
-            action.primary
-              ? "bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90 shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-          asChild
-        >
-          <Link href={action.href}>
-            <action.icon className="h-3 w-3" />
-            {action.label}
-          </Link>
-        </Button>
+        <Link key={action.href} href={action.href} className="group">
+          <div className="flex items-center gap-3 rounded-md border border-border bg-white px-4 py-3.5 transition-colors group-hover:bg-zinc-50">
+            <action.icon className="h-5 w-5 text-rasma-dark shrink-0" />
+            <div>
+              <p className="font-semibold text-sm text-rasma-dark leading-tight">{action.label}</p>
+              <p className="text-xs text-zinc-500 mt-0.5">{action.description}</p>
+            </div>
+          </div>
+        </Link>
       ))}
     </div>
   );

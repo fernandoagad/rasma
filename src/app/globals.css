@@ -52,14 +52,14 @@
   --color-rasma-teal: #25c5fa;
   --color-rasma-green: #37955b;
   --color-rasma-red: #ee4444;
-  --color-rasma-gray-700: #415762;
-  --color-rasma-gray-400: #b3bdbd;
-  --color-rasma-gray-200: #e5e6e6;
-  --color-rasma-gray-100: #f7f8f8;
+  --color-rasma-gray-700: #3f3f46;
+  --color-rasma-gray-400: #a1a1aa;
+  --color-rasma-gray-200: #e4e4e7;
+  --color-rasma-gray-100: #f4f4f5;
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.5rem;
   --background: #ffffff;
   --foreground: #1f2223;
   --card: #ffffff;
@@ -68,15 +68,15 @@
   --popover-foreground: #1f2223;
   --primary: #1f2223;
   --primary-foreground: #e0ff82;
-  --secondary: #f7f8f8;
+  --secondary: #f4f4f5;
   --secondary-foreground: #1f2223;
-  --muted: #f7f8f8;
-  --muted-foreground: #415762;
+  --muted: #f4f4f5;
+  --muted-foreground: #52525b;
   --accent: #e0ff82;
   --accent-foreground: #1f2223;
   --destructive: #ee4444;
-  --border: #e5e6e6;
-  --input: #e5e6e6;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
   --ring: #25c5fa;
   --chart-1: #37955b;
   --chart-2: #25c5fa;
@@ -133,5 +133,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 15px;
+    line-height: 1.6;
   }
 }

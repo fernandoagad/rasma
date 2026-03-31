@@ -310,6 +310,30 @@ export async function deletePatient(id: string) {
   return { success: true };
 }
 
+// List active patients (for default new-conversation view)
+export async function listActivePatients() {
+  await requireStaff();
+  return db.query.patients.findMany({
+    where: and(
+      isNull(patients.deletedAt),
+      eq(patients.status, "activo"),
+    ),
+    with: {
+      primaryTherapist: { columns: { id: true, name: true } },
+    },
+    columns: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      rut: true,
+      email: true,
+      status: true,
+    },
+    orderBy: (p, { asc }) => [asc(p.firstName), asc(p.lastName)],
+    limit: 30,
+  });
+}
+
 export async function searchExistingPatients(query: string) {
   await requireStaff();
   if (!query || query.length < 2) return [];

@@ -117,11 +117,14 @@ export function NotificationBell() {
                   onClick={() => handleClick(notif)}
                   className={cn(
                     "flex items-start gap-3 w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors",
-                    !notif.read && "bg-rasma-teal/5"
+                    !notif.read && "bg-rasma-teal/10"
                   )}
                 >
-                  <div className="mt-0.5 h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <div className={cn(
+                    "mt-0.5 h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+                    !notif.read ? "bg-rasma-teal text-white" : "bg-rasma-gray-200 text-rasma-gray-700"
+                  )}>
+                    <Icon className="h-4 w-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={cn("text-sm", !notif.read && "font-medium")}>

@@ -4,7 +4,7 @@ import { careTeamMessages, careTeamMembers, patients, users, userPresence } from
 import { eq, and, gte } from "drizzle-orm";
 import { sendChatMessageNotification } from "@/lib/email";
 
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || process.env.CRON_SECRET || "internal";
+const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || process.env.CRON_SECRET;
 
 /**
  * POST /api/internal/chat-notify
@@ -15,7 +15,12 @@ const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || process.env.CRON_SECR
  * Body: { senderId, patientId, windowStart (ISO string) }
  */
 export async function POST(request: NextRequest) {
-  // Simple auth check for internal calls
+  // Require a real secret — never fall back to a hardcoded value
+  if (!INTERNAL_SECRET) {
+    console.error("INTERNAL_API_SECRET or CRON_SECRET not configured");
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+  }
+
   const authHeader = request.headers.get("x-internal-secret");
   if (authHeader !== INTERNAL_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
