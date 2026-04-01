@@ -4,6 +4,11 @@ import { users, patients, notificationPreferences } from "./schema";
 import bcrypt from "bcryptjs";
 
 async function seed() {
+  if (process.env.NODE_ENV === "production") {
+    console.error("REFUSING TO SEED IN PRODUCTION. Set NODE_ENV=development to run seed.");
+    process.exit(1);
+  }
+
   const url = process.env.TURSO_DATABASE_URL;
   const authToken = process.env.TURSO_AUTH_TOKEN;
 

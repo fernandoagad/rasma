@@ -17,15 +17,19 @@ export function AppointmentStatusButtons({ appointmentId }: { appointmentId: str
     router.refresh();
   }
 
+  async function handleCancel() {
+    if (!confirm("Seguro que desea cancelar esta cita? Esta accion no se puede deshacer.")) return;
+    handleStatus("cancelada");
+  }
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Cambiar estado</p>
       <div className="flex flex-wrap gap-2">
         <Button
           onClick={() => handleStatus("completada")}
           disabled={loading !== null}
-          variant="outline"
-          className="gap-2 bg-rasma-dark text-white hover:bg-rasma-dark/90"
+          className="gap-2 rounded-xl bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90"
         >
           {loading === "completada" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
           Completada
@@ -34,19 +38,21 @@ export function AppointmentStatusButtons({ appointmentId }: { appointmentId: str
           onClick={() => handleStatus("no_asistio")}
           disabled={loading !== null}
           variant="outline"
-          className="gap-2 border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100"
+          className="gap-2 rounded-xl border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100"
         >
           {loading === "no_asistio" ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
           No asistio
         </Button>
+      </div>
+      <div className="pt-2 border-t">
         <Button
-          onClick={() => handleStatus("cancelada")}
+          onClick={handleCancel}
           disabled={loading !== null}
           variant="outline"
-          className="gap-2 border-rasma-red/30 text-rasma-red hover:bg-rasma-red/5"
+          className="gap-2 rounded-xl w-full sm:w-auto border-red-300 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 font-semibold"
         >
           {loading === "cancelada" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-          Cancelar
+          Cancelar esta cita
         </Button>
       </div>
     </div>

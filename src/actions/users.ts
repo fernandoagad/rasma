@@ -166,6 +166,8 @@ export async function updateUser(
   });
 
   revalidatePath("/configuracion/usuarios");
+  // Revalidate all pages so the affected user's session picks up new role/permissions
+  revalidatePath("/", "layout");
   return { success: true };
 }
 
@@ -197,7 +199,7 @@ export async function adminResetPassword(userId: string) {
     sendAdminPasswordResetEmail(targetUser.email, targetUser.name, tempPassword).catch(() => {});
   }
 
-  return { success: true, tempPassword };
+  return { success: true };
 }
 
 // Bulk operations for admin

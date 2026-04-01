@@ -7,6 +7,7 @@ import { eq, and, desc, sql, gte, lte, or } from "drizzle-orm";
 import { logAudit } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { parseChileDateTime } from "@/lib/timezone";
 import { notifyAppointmentCreated, notifyAppointmentUpdated, notifyAppointmentStatusChanged, createAppointmentReminder } from "@/lib/notifications";
 
 const PAGE_SIZE = 20;
@@ -52,11 +53,11 @@ export async function getAppointments(params?: {
   }
 
   if (params?.dateFrom) {
-    conditions.push(gte(appointments.dateTime, new Date(params.dateFrom)));
+    conditions.push(gte(appointments.dateTime, parseChileDateTime(params.dateFrom)));
   }
 
   if (params?.dateTo) {
-    conditions.push(lte(appointments.dateTime, new Date(params.dateTo + "T23:59:59")));
+    conditions.push(lte(appointments.dateTime, parseChileDateTime(params.dateTo + "T23:59:59")));
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -146,7 +147,7 @@ export async function createAppointment(
         });
         const result = await createCalendarEvent(parsed.data.therapistId, {
           summary: `Sesión - ${patient?.firstName} ${patient?.lastName}`,
-          startDateTime: new Date(parsed.data.dateTime),
+          startDateTime: parseChileDateTime(parsed.data.dateTime),
           durationMinutes: parsed.data.durationMinutes,
           addMeetLink: true,
           attendeeEmails: patient?.email ? [patient.email] : [],
@@ -164,7 +165,7 @@ export async function createAppointment(
 
   const [appt] = await db.insert(appointments).values({
     ...parsed.data,
-    dateTime: new Date(parsed.data.dateTime),
+    dateTime: parseChileDateTime(parsed.data.dateTime),
     price: parsed.data.price ?? null,
     meetingLink,
     googleEventId,
@@ -205,19 +206,25 @@ export async function updateAppointment(
     location: formData.get("location") || undefined,
     meetingLink: formData.get("meetingLink") || undefined,
     notes: formData.get("notes") || undefined,
+    price: formData.get("price") ? Number(formData.get("price")) : undefined,
   });
 
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const updates: Record<string, unknown> = { ...parsed.data, updatedAt: new Date() };
   if (parsed.data.dateTime) {
-    updates.dateTime = new Date(parsed.data.dateTime);
+    updates.dateTime = parseChileDateTime(parsed.data.dateTime);
   }
 
   // Fetch old appointment to detect changes for notification
   const oldAppt = await db.query.appointments.findFirst({
     where: eq(appointments.id, id),
   });
+
+  // Therapists can only update their own appointments
+  if (session.user.role === "terapeuta" && oldAppt?.therapistId !== session.user.id) {
+    throw new Error("No autorizado.");
+  }
 
   await db.update(appointments).set(updates).where(eq(appointments.id, id));
 
@@ -231,7 +238,7 @@ export async function updateAppointment(
   // Build changes summary and notify patient (non-blocking)
   if (oldAppt) {
     const changesList: string[] = [];
-    if (parsed.data.dateTime && new Date(parsed.data.dateTime).getTime() !== oldAppt.dateTime.getTime()) {
+    if (parsed.data.dateTime && parseChileDateTime(parsed.data.dateTime).getTime() !== oldAppt.dateTime.getTime()) {
       changesList.push("Fecha/hora");
     }
     if (parsed.data.durationMinutes && parsed.data.durationMinutes !== oldAppt.durationMinutes) {
@@ -253,11 +260,25 @@ export async function updateAppointment(
 
   revalidatePath("/citas");
   revalidatePath(`/citas/${id}`);
+  revalidatePath("/calendario");
   return { success: true };
 }
 
 export async function updateAppointmentStatus(id: string, status: string) {
   const session = await requireStaff();
+
+  const validStatuses = ["programada", "completada", "cancelada", "no_asistio"];
+  if (!validStatuses.includes(status)) return { error: "Estado invalido." };
+
+  // Therapists can only update status on their own appointments
+  if (session.user.role === "terapeuta") {
+    const existing = await db.query.appointments.findFirst({
+      where: eq(appointments.id, id),
+    });
+    if (existing?.therapistId !== session.user.id) {
+      throw new Error("No autorizado.");
+    }
+  }
 
   await db.update(appointments).set({
     status: status as "programada" | "completada" | "cancelada" | "no_asistio",
@@ -276,6 +297,8 @@ export async function updateAppointmentStatus(id: string, status: string) {
   notifyAppointmentStatusChanged(id, status).catch(() => {});
 
   revalidatePath("/citas");
+  revalidatePath(`/citas/${id}`);
+  revalidatePath("/calendario");
   return { success: true };
 }
 
@@ -370,12 +393,24 @@ export async function createRecurringAppointments(data: {
   const session = await requireStaff();
 
   const groupId = crypto.randomUUID();
-  const startDate = new Date(data.startDateTime);
   const createdIds: string[] = [];
 
+  // Extract the time portion to preserve it across DST boundaries
+  const tIdx = data.startDateTime.indexOf("T");
+  const timePart = tIdx >= 0 ? data.startDateTime.slice(tIdx + 1) : "09:00";
+  const firstDate = parseChileDateTime(data.startDateTime);
+
   for (let i = 0; i < data.recurrenceWeeks; i++) {
-    const dateTime = new Date(startDate);
-    dateTime.setDate(dateTime.getDate() + i * 7);
+    // Build each week's date by adding calendar days, then re-parse as Chile time
+    // so the local time stays the same even across CLT/CLST transitions
+    const dayOffset = new Date(firstDate.getTime() + i * 7 * 86400000);
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Santiago",
+      year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(dayOffset);
+    const g = (t: string) => parts.find((p) => p.type === t)?.value || "01";
+    const naive = `${g("year")}-${g("month")}-${g("day")}T${timePart}`;
+    const dateTime = parseChileDateTime(naive);
 
     // Auto-generate Google Meet link for online appointments
     let meetingLink: string | null = null;

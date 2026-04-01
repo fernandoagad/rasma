@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-header";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Suspense } from "react";
@@ -56,30 +55,57 @@ export default async function CitasPage({
       : []),
   ];
 
+  const scheduledCount = appointments.filter((a) => a.status === "programada").length;
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <PageHeader
-        title="Citas"
-        subtitle={`${total} citas en total`}
-        action={
-          <Link href="/citas/nueva">
-            <Button className="h-11 px-5 text-base font-semibold rounded-xl gap-2 bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90">
-              <Plus className="h-5 w-5" />
-              Nueva Cita
-            </Button>
-          </Link>
-        }
-      />
+      {/* ═══ HEADER ═══ */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-rasma-dark text-rasma-lime flex items-center justify-center">
+              <Calendar className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-rasma-dark tracking-tight">Citas</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {total} en total
+                {scheduledCount > 0 && (
+                  <> · <span className="font-medium text-rasma-dark">{scheduledCount} programada{scheduledCount !== 1 ? "s" : ""}</span></>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
 
+        <Link href="/citas/nueva">
+          <Button className="h-11 px-5 text-base font-semibold rounded-xl gap-2 bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90">
+            <Plus className="h-5 w-5" />
+            Nueva Cita
+          </Button>
+        </Link>
+      </div>
+
+      {/* ═══ FILTERS ═══ */}
       <Suspense>
         <FilterBar filters={filters} basePath="/citas" />
       </Suspense>
 
+      {/* ═══ LIST ═══ */}
       {appointments.length === 0 ? (
         <EmptyState
           icon={Calendar}
           title="No hay citas registradas"
-          description="Cree una nueva cita para comenzar."
+          description={params.status ? "No hay citas con este filtro. Intenta cambiar los filtros." : "Cree una nueva cita para comenzar."}
+          action={
+            !params.status ? (
+              <Link href="/citas/nueva">
+                <Button className="bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90 gap-2">
+                  <Plus className="h-4 w-4" /> Nueva Cita
+                </Button>
+              </Link>
+            ) : undefined
+          }
         />
       ) : (
         <AppointmentsList

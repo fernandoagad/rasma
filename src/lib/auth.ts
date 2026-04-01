@@ -9,7 +9,7 @@ import { loginSchema } from "@/lib/validations/auth";
 import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 }, // 30 days for "remember me"
+  session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60 }, // 7 days for "remember me"
   pages: {
     signIn: "/login",
   },
@@ -202,30 +202,49 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
 
-    jwt({ token, user, account }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.role = user.role;
         token.id = user.id;
         token.linkedPatientId = user.linkedPatientId;
-        // Store remember-me preference (Google sign-in defaults to true)
         token.rememberMe = (user as Record<string, unknown>).rememberMe ?? true;
+        token.roleCheckedAt = Date.now();
+      }
+
+      // Refresh role from database periodically (every 30 seconds)
+      // so admin role changes take effect without requiring logout
+      if (token.id) {
+        const lastCheck = (token.roleCheckedAt as number) || 0;
+        const elapsed = Date.now() - lastCheck;
+        if (elapsed > 30_000) {
+          const dbUser = await db.query.users.findFirst({
+            where: eq(users.id, token.id as string),
+            columns: { role: true, active: true, linkedPatientId: true },
+          });
+          if (dbUser) {
+            if (!dbUser.active) {
+              delete token.id;
+              delete token.role;
+              return token;
+            }
+            token.role = dbUser.role;
+            token.linkedPatientId = dbUser.linkedPatientId;
+          }
+          token.roleCheckedAt = Date.now();
+        }
       }
 
       // Soft expiry: non-remember-me sessions expire after 24 hours
-      // token.iat is set automatically by NextAuth (seconds since epoch)
       if (!token.rememberMe && token.iat) {
         const ageSeconds = Math.floor(Date.now() / 1000) - (token.iat as number);
         if (ageSeconds > 24 * 60 * 60) {
-          // Clear identity fields — session callback will see missing id and force re-login
           delete token.id;
           delete token.role;
         }
       }
 
-      // Pass Google access token through to session if needed
-      if (account?.provider === "google" && account.access_token) {
-        token.googleAccessToken = account.access_token;
-      }
+      // Google tokens are stored in the database (googleTokens table)
+      // and fetched server-side when needed — not stored in JWT
       return token;
     },
 

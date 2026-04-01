@@ -18,8 +18,7 @@ import { createInAppNotification } from "@/actions/in-app-notifications";
 
 // Get care team members for a patient
 export async function getCareTeamForPatient(patientId: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  const session = await requireStaff();
 
   return db.query.careTeamMembers.findMany({
     where: eq(careTeamMembers.patientId, patientId),
@@ -34,8 +33,7 @@ export async function getCareTeamForPatient(patientId: string) {
 
 // Get care team members with their activity (sessions, last appointment)
 export async function getCareTeamWithActivity(patientId: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  const session = await requireStaff();
 
   const members = await db.query.careTeamMembers.findMany({
     where: eq(careTeamMembers.patientId, patientId),
@@ -235,7 +233,8 @@ export async function sendCareTeamMessage(patientId: string, content: string) {
     pendingNotifyTimers.delete(batchKey);
     try {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.AUTH_URL || "http://localhost:3000";
-      const secret = process.env.INTERNAL_API_SECRET || process.env.CRON_SECRET || "internal";
+      const secret = process.env.INTERNAL_API_SECRET || process.env.CRON_SECRET;
+      if (!secret) { pendingNotifyTimers.delete(batchKey); return; }
       await fetch(`${baseUrl}/api/internal/chat-notify`, {
         method: "POST",
         headers: {

@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+const strongPassword = z
+  .string()
+  .min(8, "La contrasena debe tener al menos 8 caracteres.")
+  .regex(/[A-Z]/, "Debe incluir al menos una letra mayuscula.")
+  .regex(/[0-9]/, "Debe incluir al menos un numero.")
+  .regex(/[^A-Za-z0-9]/, "Debe incluir al menos un caracter especial.");
+
 export const loginSchema = z.object({
   email: z
     .string()
@@ -20,9 +27,7 @@ export const resetRequestSchema = z.object({
 export const resetPasswordSchema = z
   .object({
     token: z.string().min(1),
-    password: z
-      .string()
-      .min(8, "La contraseña debe tener al menos 8 caracteres."),
+    password: strongPassword,
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -33,9 +38,7 @@ export const resetPasswordSchema = z
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "La contraseña actual es obligatoria."),
-    newPassword: z
-      .string()
-      .min(8, "La nueva contraseña debe tener al menos 8 caracteres."),
+    newPassword: strongPassword,
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -58,9 +61,7 @@ export const registerSchema = z
       .string()
       .min(1, "El correo electronico es obligatorio.")
       .email("Correo electronico invalido."),
-    password: z
-      .string()
-      .min(8, "La contrasena debe tener al menos 8 caracteres."),
+    password: strongPassword,
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {

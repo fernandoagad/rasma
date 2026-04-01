@@ -114,7 +114,7 @@ export function LoginForm() {
         <div className="text-center space-y-3 pt-1">
           <Link
             href="/recuperar"
-            className="text-sm text-rasma-teal hover:text-rasma-teal/80 transition-colors block font-medium"
+            className="text-sm text-rasma-dark hover:text-rasma-dark/70 underline-offset-2 hover:underline transition-colors block font-medium"
           >
             {UI.auth.forgotPassword}
           </Link>
@@ -122,7 +122,7 @@ export function LoginForm() {
             <span className="text-sm text-muted-foreground">¿No tiene cuenta? </span>
             <Link
               href="/registro"
-              className="text-sm text-rasma-teal hover:text-rasma-teal/80 transition-colors font-bold"
+              className="text-sm text-rasma-dark hover:text-rasma-dark/70 underline-offset-2 hover:underline transition-colors font-bold"
             >
               Crear cuenta
             </Link>

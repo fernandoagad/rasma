@@ -1,6 +1,6 @@
 "use server";
 
-import { requireStaff } from "@/lib/authorization";
+import { requireStaff, requirePatientAccess } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { patients, users, careTeamMembers, appointments, treatmentPlans } from "@/lib/db/schema";
 import { eq, and, or, like, isNull, desc, sql, inArray, gte } from "drizzle-orm";
@@ -167,6 +167,7 @@ export async function getPatientsEnriched(params?: {
 
 export async function getPatientById(id: string) {
   const session = await requireStaff();
+  await requirePatientAccess(session, id);
 
   const patient = await db.query.patients.findFirst({
     where: and(eq(patients.id, id), isNull(patients.deletedAt)),
@@ -237,6 +238,7 @@ export async function updatePatient(
   formData: FormData
 ) {
   const session = await requireStaff();
+  await requirePatientAccess(session, id);
 
   const raw = Object.fromEntries(formData);
   const parsed = patientFormSchema.safeParse(raw);
@@ -291,6 +293,11 @@ export async function deletePatient(id: string) {
   // Only admin and terapeuta can delete
   if (!["admin", "terapeuta"].includes(session.user.role)) {
     return { error: "No tiene permisos para eliminar pacientes." };
+  }
+
+  // Therapists can only delete their own patients
+  if (session.user.role === "terapeuta") {
+    await requirePatientAccess(session, id);
   }
 
   // Soft delete
@@ -390,6 +397,9 @@ export async function bulkUpdatePatientStatus(
   if (!["admin", "supervisor", "terapeuta"].includes(session.user.role)) return { error: "No tiene permisos." };
   if (patientIds.length === 0) return { error: "Sin pacientes seleccionados." };
   if (!["activo", "inactivo", "alta"].includes(status)) return { error: "Estado inválido." };
+  if (session.user.role === "terapeuta") {
+    for (const pid of patientIds) await requirePatientAccess(session, pid);
+  }
 
   await db.update(patients)
     .set({ status, updatedAt: new Date() })
@@ -413,6 +423,9 @@ export async function bulkUpdatePatientTherapist(
   const session = await requireStaff();
   if (!["admin", "supervisor", "terapeuta"].includes(session.user.role)) return { error: "No tiene permisos." };
   if (patientIds.length === 0) return { error: "Sin pacientes seleccionados." };
+  if (session.user.role === "terapeuta") {
+    for (const pid of patientIds) await requirePatientAccess(session, pid);
+  }
 
   if (therapistId) {
     const therapist = await db.query.users.findFirst({

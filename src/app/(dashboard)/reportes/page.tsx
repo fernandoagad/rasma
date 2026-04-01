@@ -33,16 +33,16 @@ export default async function ReportesPage({
       value: data.patients.total,
       sub: `${data.patients.active} activos`,
       icon: Users,
-      color: "text-rasma-teal",
-      bg: "bg-rasma-teal/10",
+      color: "text-rasma-dark",
+      bg: "bg-zinc-100",
     },
     {
       title: "Citas",
       value: data.appointments.total,
       sub: `${data.appointments.completed} completadas`,
       icon: Calendar,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
+      color: "text-rasma-dark",
+      bg: "bg-rasma-dark/10",
     },
     {
       title: "Tasa cumplimiento",
@@ -74,32 +74,30 @@ export default async function ReportesPage({
       />
 
       {/* Date filters */}
-      <Card>
-        <CardContent className="pt-2">
-          <form className="flex gap-4 items-end flex-wrap">
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Desde</label>
-              <input type="date" name="dateFrom" defaultValue={data.dateFrom} className="border rounded-lg px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Hasta</label>
-              <input type="date" name="dateTo" defaultValue={data.dateTo} className="border rounded-lg px-3 py-2 text-sm" />
-            </div>
-            <Button type="submit" size="sm">Filtrar</Button>
-          </form>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-4 flex-wrap p-4 rounded-2xl border bg-white">
+        <form className="flex gap-4 items-end flex-wrap">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Desde</label>
+            <input type="date" name="dateFrom" defaultValue={data.dateFrom} className="border rounded-xl px-3 py-2 text-sm bg-zinc-50" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Hasta</label>
+            <input type="date" name="dateTo" defaultValue={data.dateTo} className="border rounded-xl px-3 py-2 text-sm bg-zinc-50" />
+          </div>
+          <Button type="submit" size="sm" className="rounded-xl bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90">Filtrar</Button>
+        </form>
+      </div>
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat) => (
-          <Card key={stat.title}>
-            <CardContent className="pt-2">
+          <Card key={stat.title} className="rounded-2xl">
+            <CardContent className="pt-4 pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="text-2xl font-bold mt-1">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.sub}</p>
+                  <p className="text-xs text-muted-foreground font-medium">{stat.title}</p>
+                  <p className="text-2xl font-extrabold text-rasma-dark mt-1 tabular-nums">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{stat.sub}</p>
                 </div>
                 <div className={`h-10 w-10 rounded-xl ${stat.bg} flex items-center justify-center`}>
                   <stat.icon className={`h-5 w-5 ${stat.color}`} />

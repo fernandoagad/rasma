@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Repeat, XCircle, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { getRecurringGroupAppointments, cancelRecurringGroup } from "@/actions/appointments";
 import { cn } from "@/lib/utils";
+import { formatChileTime, formatChileDate } from "@/lib/timezone";
 
 interface RecurringSeriesCardProps {
   groupId: string;
@@ -34,6 +35,7 @@ export function RecurringSeriesCard({ groupId, currentId }: RecurringSeriesCardP
   );
 
   const completedCount = appointments.filter((a) => a.status === "completada").length;
+  const noShowCount = appointments.filter((a) => a.status === "no_asistio").length;
   const cancelledCount = appointments.filter((a) => a.status === "cancelada").length;
 
   async function handleCancelFuture() {
@@ -47,8 +49,8 @@ export function RecurringSeriesCard({ groupId, currentId }: RecurringSeriesCardP
   if (!loaded) return null;
 
   return (
-    <Card className="border-border bg-zinc-50/50">
-      <CardContent className="pt-2">
+    <Card className="border-border bg-zinc-50/50 rounded-2xl">
+      <CardContent className="pt-3">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Repeat className="h-4 w-4 text-rasma-dark" />
@@ -63,7 +65,7 @@ export function RecurringSeriesCard({ groupId, currentId }: RecurringSeriesCardP
                 size="sm"
                 onClick={handleCancelFuture}
                 disabled={cancelling}
-                className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                className="gap-1.5 rounded-xl text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
               >
                 {cancelling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
                 Cancelar futuras ({futureScheduled.length})
@@ -81,11 +83,56 @@ export function RecurringSeriesCard({ groupId, currentId }: RecurringSeriesCardP
           </div>
         </div>
 
-        {/* Summary */}
-        <div className="flex gap-4 text-xs text-muted-foreground">
-          <span>{completedCount} completada{completedCount !== 1 ? "s" : ""}</span>
-          <span>{futureScheduled.length} programada{futureScheduled.length !== 1 ? "s" : ""}</span>
-          {cancelledCount > 0 && <span>{cancelledCount} cancelada{cancelledCount !== 1 ? "s" : ""}</span>}
+        {/* Progress bar */}
+        <div className="space-y-2">
+          <div className="flex h-2 rounded-full overflow-hidden bg-zinc-200">
+            {completedCount > 0 && (
+              <div
+                className="bg-emerald-500 transition-all"
+                style={{ width: `${(completedCount / appointments.length) * 100}%` }}
+              />
+            )}
+            {futureScheduled.length > 0 && (
+              <div
+                className="bg-blue-400 transition-all"
+                style={{ width: `${(futureScheduled.length / appointments.length) * 100}%` }}
+              />
+            )}
+            {noShowCount > 0 && (
+              <div
+                className="bg-amber-400 transition-all"
+                style={{ width: `${(noShowCount / appointments.length) * 100}%` }}
+              />
+            )}
+            {cancelledCount > 0 && (
+              <div
+                className="bg-red-300 transition-all"
+                style={{ width: `${(cancelledCount / appointments.length) * 100}%` }}
+              />
+            )}
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              {completedCount} completada{completedCount !== 1 ? "s" : ""}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-blue-400" />
+              {futureScheduled.length} programada{futureScheduled.length !== 1 ? "s" : ""}
+            </span>
+            {noShowCount > 0 && (
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-amber-400" />
+                {noShowCount} no asistio
+              </span>
+            )}
+            {cancelledCount > 0 && (
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-red-300" />
+                {cancelledCount} cancelada{cancelledCount !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Expanded list */}
@@ -99,19 +146,19 @@ export function RecurringSeriesCard({ groupId, currentId }: RecurringSeriesCardP
                   key={appt.id}
                   href={`/citas/${appt.id}`}
                   className={cn(
-                    "flex items-center justify-between p-2 rounded-lg text-sm transition-colors",
+                    "flex items-center justify-between p-2.5 rounded-xl text-sm transition-colors",
                     isCurrent
-                      ? "bg-zinc-100 border border-zinc-300"
-                      : "hover:bg-zinc-50"
+                      ? "bg-white border border-zinc-300 shadow-sm"
+                      : "hover:bg-zinc-100/50"
                   )}
                 >
                   <div className="flex items-center gap-2">
                     {isCurrent && <span className="h-1.5 w-1.5 rounded-full bg-rasma-dark" />}
                     <span className={cn("capitalize", isCurrent && "font-semibold")}>
-                      {dt.toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" })}
+                      {formatChileDate(dt, { weekday: "short", day: "numeric", month: "short" })}
                     </span>
                     <span className="text-muted-foreground">
-                      {dt.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
+                      {formatChileTime(dt)}
                     </span>
                   </div>
                   <StatusBadge type="appointment" status={appt.status} />

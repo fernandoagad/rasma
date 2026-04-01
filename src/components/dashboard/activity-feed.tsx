@@ -62,7 +62,7 @@ function formatRelativeTime(date: Date): string {
   if (diffMin < 60) return `${diffMin}m`;
   if (diffHour < 24) return `${diffHour}h`;
   if (diffDay < 7) return `${diffDay}d`;
-  return date.toLocaleDateString("es-CL", { day: "numeric", month: "short" });
+  return date.toLocaleDateString("es-CL", { timeZone: "America/Santiago", day: "numeric", month: "short" });
 }
 
 interface ActivityFeedProps {
@@ -91,7 +91,7 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
             key={activity.id}
             className="flex items-center gap-3 py-2"
           >
-            <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${colorClass}`}>
+            <div className={`h-7 w-7 rounded-xl flex items-center justify-center shrink-0 ${colorClass}`}>
               <Icon className="h-3.5 w-3.5" />
             </div>
             <p className="text-sm flex-1 min-w-0 truncate">

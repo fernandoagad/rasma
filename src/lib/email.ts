@@ -196,7 +196,7 @@ async function sendEmail(
     const gmail = getGmailClient();
     const raw = buildRawEmail(to, subject, html, text);
     await gmail.users.messages.send({ userId: "me", requestBody: { raw } });
-    console.log(`[EMAIL SENT] To: ${to}, Subject: ${subject}`);
+    console.log(`[EMAIL SENT] Subject: ${subject}`);
     return true;
   } catch (e) {
     console.error("Failed to send email:", e);

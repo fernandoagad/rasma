@@ -32,6 +32,7 @@ const statusLabel: Record<string, string> = {
 
 function formatDateSpanish(date: Date): string {
   return date.toLocaleDateString("es-CL", {
+    timeZone: "America/Santiago",
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -41,6 +42,7 @@ function formatDateSpanish(date: Date): string {
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("es-CL", {
+    timeZone: "America/Santiago",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -199,7 +201,7 @@ function ProfessionalsSection({
           {professionals.map((member) => (
             <div
               key={member.id}
-              className="flex items-center gap-3 rounded-lg border p-3"
+              className="flex items-center gap-3 rounded-xl border p-3"
             >
               <AvatarInitials
                 name={member.user.name}

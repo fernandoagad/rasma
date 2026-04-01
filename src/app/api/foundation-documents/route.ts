@@ -113,8 +113,8 @@ export async function POST(request: NextRequest) {
       file: { id: doc.id, ...result },
     });
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Error al subir archivo.";
+    console.error("[UPLOAD ERROR]", error instanceof Error ? error.message : error);
+    const message = "Error al subir archivo.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

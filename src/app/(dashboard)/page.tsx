@@ -16,6 +16,8 @@ import {
   ArrowRight,
   CalendarDays,
   CheckCircle2,
+  Plus,
+  ClipboardList,
 } from "lucide-react";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { UpcomingAppointments } from "@/components/dashboard/upcoming-appointments";
@@ -35,7 +37,6 @@ export default async function DashboardPage() {
 
   const role = session.user.role;
 
-  // Redirect non-staff roles to their appropriate pages
   if (role === "paciente") redirect("/mis-citas");
   if (role === "invitado") redirect("/pendiente");
 
@@ -48,24 +49,23 @@ export default async function DashboardPage() {
     getTodayAppointments(),
   ]);
 
-  // Serialize dates for client components
   const todaySerialized = todayAppts.map((a) => ({
     ...a,
     dateTime: a.dateTime instanceof Date ? a.dateTime.toISOString() : String(a.dateTime),
   }));
 
-  // Find next/current appointment for the hero card
   const now = new Date();
   const nextAppt = todaySerialized.find((a) => {
     if (a.status !== "programada") return false;
     const start = new Date(a.dateTime);
     const end = new Date(start);
     end.setMinutes(end.getMinutes() + a.durationMinutes);
-    return now <= end; // current or upcoming
+    return now <= end;
   }) ?? null;
 
   const today = new Date();
   const dateStr = today.toLocaleDateString("es-CL", {
+    timeZone: "America/Santiago",
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -74,76 +74,134 @@ export default async function DashboardPage() {
   const completedToday = todayAppts.filter((a) => a.status === "completada").length;
   const scheduledToday = todayAppts.filter((a) => a.status === "programada").length;
 
+  const isTherapist = role === "terapeuta";
+  const canSeePayments = role === "admin" || role === "recepcionista" || role === "supervisor";
+  const canSeeNotes = role === "terapeuta" || role === "supervisor" || role === "admin";
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* ─── Header: greeting + date ─── */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-rasma-dark tracking-tight">
-          {getGreeting()}, {firstName}
-        </h1>
-        <p className="text-base text-muted-foreground capitalize mt-1">{dateStr}</p>
+
+      {/* ═══ HERO HEADER ═══ */}
+      <div className="relative rounded-2xl bg-rasma-dark px-6 py-6 sm:px-8 sm:py-7 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(37,197,250,0.1),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(224,255,130,0.06),transparent_50%)]" />
+
+        <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <p className="text-xs text-white/40 font-medium uppercase tracking-[0.2em] mb-1">{dateStr}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              {getGreeting()}, <span className="text-rasma-lime">{firstName}</span>
+            </h1>
+          </div>
+
+          {/* Inline stat pills */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {todayAppts.length > 0 && (
+              <div className="flex items-center gap-1.5 bg-white/10 rounded-lg px-3 py-1.5">
+                <Calendar className="h-3.5 w-3.5 text-rasma-lime" />
+                <span className="text-xs text-white/80 font-medium">
+                  {todayAppts.length} cita{todayAppts.length !== 1 ? "s" : ""} hoy
+                </span>
+              </div>
+            )}
+            {completedToday > 0 && (
+              <div className="flex items-center gap-1.5 bg-white/10 rounded-lg px-3 py-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                <span className="text-xs text-white/80 font-medium">
+                  {completedToday} completada{completedToday !== 1 ? "s" : ""}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* ─── Quick actions: big obvious cards ─── */}
+      {/* ═══ QUICK ACTIONS ═══ */}
       <QuickActions userRole={role} />
 
-      {/* ─── Stats row: big, obvious cards ─── */}
+      {/* ═══ STATS ROW ═══ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label={role === "terapeuta" ? "Mis pacientes" : "Pacientes"} value={stats.patientCount} icon={<Users className="h-4 w-4" />} href="/pacientes" />
-        <StatCard label="Citas hoy" value={stats.todayAppointments} icon={<Calendar className="h-4 w-4" />} href="/citas" />
-        {(role === "admin" || role === "recepcionista" || role === "supervisor") ? (
-          <StatCard label="Pagos pendientes" value={stats.pendingPayments} icon={<CreditCard className="h-4 w-4" />} href="/pagos" alert={stats.pendingPayments > 0} />
+        <StatCard
+          label={isTherapist ? "Mis pacientes" : "Pacientes"}
+          value={stats.patientCount}
+          icon={<Users className="h-4 w-4" />}
+          href="/pacientes"
+        />
+        <StatCard
+          label="Citas hoy"
+          value={stats.todayAppointments}
+          icon={<Calendar className="h-4 w-4" />}
+          href="/citas"
+          highlight={stats.todayAppointments > 0}
+        />
+        {canSeePayments ? (
+          <StatCard
+            label="Pagos pendientes"
+            value={stats.pendingPayments}
+            icon={<CreditCard className="h-4 w-4" />}
+            href="/pagos"
+            alert={stats.pendingPayments > 0}
+          />
         ) : (
-          <StatCard label="Completadas esta semana" value={stats.completedThisWeek} icon={<CheckCircle2 className="h-4 w-4" />} href="/citas" />
+          <StatCard
+            label="Completadas semana"
+            value={stats.completedThisWeek}
+            icon={<CheckCircle2 className="h-4 w-4" />}
+            href="/citas"
+          />
         )}
-        {(role === "terapeuta" || role === "supervisor" || role === "admin") ? (
-          <StatCard label="Notas pendientes" value={stats.pendingNotes} icon={<FileText className="h-4 w-4" />} href="/notas" alert={stats.pendingNotes > 0} />
+        {canSeeNotes ? (
+          <StatCard
+            label="Notas pendientes"
+            value={stats.pendingNotes}
+            icon={<FileText className="h-4 w-4" />}
+            href="/notas"
+            alert={stats.pendingNotes > 0}
+          />
         ) : (
-          <StatCard label="Citas esta semana" value={stats.weekAppointments} icon={<CalendarDays className="h-4 w-4" />} href="/calendario" />
+          <StatCard
+            label="Citas semana"
+            value={stats.weekAppointments}
+            icon={<CalendarDays className="h-4 w-4" />}
+            href="/calendario"
+          />
         )}
       </div>
 
-      {/* ─── Main grid ─── */}
+      {/* ═══ MAIN GRID ═══ */}
       <div className="grid gap-5 lg:grid-cols-12">
 
-        {/* ─── LEFT: Hero + Today Timeline ─── */}
+        {/* ─── LEFT COLUMN ─── */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-4">
 
-          {/* Next / Current Appointment Hero */}
+          {/* Next Appointment Hero */}
           <NextAppointment appointment={nextAppt} userRole={role} />
 
-          {/* Alert banners */}
-          {stats.pendingNotes > 0 && (role === "terapeuta" || role === "supervisor" || role === "admin") && (
-            <Link href="/notas" className="block group">
-              <div className="flex items-center gap-3 rounded-md border border-border px-4 py-3 transition-colors group-hover:bg-zinc-50">
-                <FileText className="h-4 w-4 text-rasma-dark shrink-0" />
-                <p className="text-sm flex-1">
-                  <span className="font-bold text-rasma-dark">
-                    {stats.pendingNotes} {stats.pendingNotes === 1 ? "nota pendiente" : "notas pendientes"}
-                  </span>
-                  <span className="text-zinc-500 ml-1">— citas completadas sin nota de sesión</span>
-                </p>
-                <ArrowRight className="h-4 w-4 text-zinc-400 shrink-0" />
-              </div>
-            </Link>
+          {/* Alert: pending notes */}
+          {stats.pendingNotes > 0 && canSeeNotes && (
+            <AlertBanner
+              href="/notas"
+              icon={<FileText className="h-4 w-4" />}
+              count={stats.pendingNotes}
+              singular="nota pendiente"
+              plural="notas pendientes"
+              detail="citas completadas sin nota de sesion"
+            />
           )}
 
-          {stats.pendingPayments > 0 && (role === "admin" || role === "recepcionista" || role === "supervisor") && (
-            <Link href="/pagos" className="block group">
-              <div className="flex items-center gap-3 rounded-md border border-border px-4 py-3 transition-colors group-hover:bg-zinc-50">
-                <CreditCard className="h-4 w-4 text-rasma-dark shrink-0" />
-                <p className="text-sm flex-1">
-                  <span className="font-bold text-rasma-dark">
-                    {stats.pendingPayments} {stats.pendingPayments === 1 ? "pago pendiente" : "pagos pendientes"}
-                  </span>
-                  <span className="text-zinc-500 ml-1">— requieren atención</span>
-                </p>
-                <ArrowRight className="h-4 w-4 text-zinc-400 shrink-0" />
-              </div>
-            </Link>
+          {/* Alert: pending payments */}
+          {stats.pendingPayments > 0 && canSeePayments && (
+            <AlertBanner
+              href="/pagos"
+              icon={<CreditCard className="h-4 w-4" />}
+              count={stats.pendingPayments}
+              singular="pago pendiente"
+              plural="pagos pendientes"
+              detail="requieren atencion"
+            />
           )}
 
-          {/* Today's full schedule */}
+          {/* Today's schedule */}
           <Card className="overflow-hidden py-0 gap-0">
             <CardHeader className="py-3.5 px-5 border-b bg-muted/30">
               <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -176,15 +234,16 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        {/* ─── RIGHT: Upcoming + Activity ─── */}
+        {/* ─── RIGHT COLUMN ─── */}
         <div className="lg:col-span-5 xl:col-span-4 space-y-3">
-          {/* Progress this week */}
+
+          {/* Weekly progress */}
           {stats.weekAppointments > 0 && (
-            <div className="rounded-lg border bg-white px-5 py-4">
-              <div className="flex items-center justify-between mb-2">
+            <div className="rounded-2xl border bg-white px-5 py-4">
+              <div className="flex items-center justify-between mb-2.5">
                 <p className="text-sm font-bold text-rasma-dark">Progreso semanal</p>
                 <p className="text-sm text-muted-foreground tabular-nums font-medium">
-                  {stats.completedThisWeek} de {stats.weekAppointments}
+                  {stats.completedThisWeek}/{stats.weekAppointments}
                 </p>
               </div>
               <div className="h-2.5 rounded-full bg-muted overflow-hidden">
@@ -195,20 +254,23 @@ export default async function DashboardPage() {
                   }}
                 />
               </div>
+              <p className="text-[10px] text-muted-foreground mt-2">
+                {Math.round((stats.completedThisWeek / stats.weekAppointments) * 100)}% completado esta semana
+              </p>
             </div>
           )}
 
-          {/* Upcoming */}
+          {/* Upcoming appointments */}
           <Card className="overflow-hidden py-0 gap-0">
             <CardHeader className="py-3.5 px-5 border-b bg-muted/30">
-              <CardTitle className="text-base font-bold">Próximas citas</CardTitle>
+              <CardTitle className="text-base font-bold">Proximas citas</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
               <UpcomingAppointments appointments={upcoming} />
             </CardContent>
           </Card>
 
-          {/* Activity */}
+          {/* Activity feed */}
           <Card className="overflow-hidden py-0 gap-0">
             <CardHeader className="py-3.5 px-5 border-b bg-muted/30">
               <CardTitle className="text-base font-bold">Actividad</CardTitle>
@@ -223,7 +285,9 @@ export default async function DashboardPage() {
   );
 }
 
-/* ─── Helper components ─── */
+/* ═══════════════════════════════════════════════
+   HELPER COMPONENTS
+   ═══════════════════════════════════════════════ */
 
 function StatCard({
   label,
@@ -231,23 +295,72 @@ function StatCard({
   icon,
   href,
   alert,
+  highlight,
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
   href: string;
   alert?: boolean;
+  highlight?: boolean;
 }) {
   return (
     <Link href={href} className="group">
-      <div className={`rounded-md border bg-white p-4 transition-colors group-hover:bg-zinc-50 ${
-        alert ? "border-rasma-dark" : ""
-      }`}>
-        <div className="flex items-center gap-2 text-zinc-500 mb-1">
-          {icon}
-          <p className="text-sm truncate">{label}</p>
+      <div
+        className={`rounded-2xl border bg-white p-4 transition-all group-hover:shadow-md group-hover:-translate-y-0.5 ${
+          alert
+            ? "border-rasma-red/30 bg-red-50/30"
+            : highlight
+            ? "border-rasma-dark/20"
+            : ""
+        }`}
+      >
+        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+          <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${
+            alert ? "bg-red-100 text-rasma-red" : "bg-zinc-100 text-rasma-dark"
+          }`}>
+            {icon}
+          </div>
+          <p className="text-xs font-medium truncate">{label}</p>
         </div>
-        <p className="text-2xl font-bold text-rasma-dark leading-none tabular-nums">{value}</p>
+        <p className={`text-3xl font-extrabold leading-none tabular-nums ${
+          alert ? "text-rasma-red" : "text-rasma-dark"
+        }`}>
+          {value}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+function AlertBanner({
+  href,
+  icon,
+  count,
+  singular,
+  plural,
+  detail,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  count: number;
+  singular: string;
+  plural: string;
+  detail: string;
+}) {
+  return (
+    <Link href={href} className="block group">
+      <div className="flex items-center gap-3 rounded-2xl border border-rasma-dark/10 bg-rasma-dark/[0.03] px-5 py-3.5 transition-all group-hover:bg-rasma-dark/[0.06] group-hover:border-rasma-dark/20">
+        <div className="h-8 w-8 rounded-lg bg-rasma-dark text-rasma-lime flex items-center justify-center shrink-0">
+          {icon}
+        </div>
+        <p className="text-sm flex-1 min-w-0">
+          <span className="font-bold text-rasma-dark">
+            {count} {count === 1 ? singular : plural}
+          </span>
+          <span className="text-muted-foreground ml-1.5">— {detail}</span>
+        </p>
+        <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:translate-x-0.5 transition-transform" />
       </div>
     </Link>
   );
@@ -255,7 +368,7 @@ function StatCard({
 
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return "Buenos días";
+  if (hour < 12) return "Buenos dias";
   if (hour < 19) return "Buenas tardes";
   return "Buenas noches";
 }

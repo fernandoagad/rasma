@@ -148,7 +148,7 @@ export function IncomeTable({ income }: { income: Income[] }) {
       {income.length === 0 ? (
         <EmptyState icon={TrendingUp} title="No hay ingresos registrados" description="Registra un nuevo ingreso para comenzar." />
       ) : (
-        <div className="rounded-xl border bg-card">
+        <div className="rounded-2xl border bg-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">

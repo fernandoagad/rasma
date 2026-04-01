@@ -103,7 +103,7 @@ export async function renamePatientFile(fileId: string, patientId: string, newFi
     await renameFileOnDrive(file.driveFileId, trimmed);
   } catch { /* Drive rename is best-effort */ }
 
-  await db.update(patientFiles).set({ fileName: trimmed }).where(eq(patientFiles.id, fileId));
+  await db.update(patientFiles).set({ fileName: trimmed }).where(and(eq(patientFiles.id, fileId), eq(patientFiles.patientId, patientId)));
   await logAudit({ userId: session.user.id, action: "update", entityType: "patient_file", entityId: fileId, details: { patientId, newName: trimmed } });
   revalidatePath(`/pacientes/${patientId}`);
   return { success: true };
@@ -117,7 +117,7 @@ export async function updateFileLabel(fileId: string, patientId: string, label: 
   const trimmed = label?.trim() || null;
   if (trimmed && trimmed.length > 100) return { error: "Etiqueta muy larga (máx 100 caracteres)." };
 
-  await db.update(patientFiles).set({ label: trimmed }).where(eq(patientFiles.id, fileId));
+  await db.update(patientFiles).set({ label: trimmed }).where(and(eq(patientFiles.id, fileId), eq(patientFiles.patientId, patientId)));
   await logAudit({ userId: session.user.id, action: "update", entityType: "patient_file", entityId: fileId, details: { patientId, label: trimmed } });
   revalidatePath(`/pacientes/${patientId}`);
   return { success: true };
@@ -131,7 +131,7 @@ export async function updateFileCategory(fileId: string, patientId: string, cate
   const valid = ["general", "evaluacion", "informe", "consentimiento", "otro"];
   if (!valid.includes(category)) return { error: "Categoría inválida." };
 
-  await db.update(patientFiles).set({ category: category as "general" | "evaluacion" | "informe" | "consentimiento" | "otro" }).where(eq(patientFiles.id, fileId));
+  await db.update(patientFiles).set({ category: category as "general" | "evaluacion" | "informe" | "consentimiento" | "otro" }).where(and(eq(patientFiles.id, fileId), eq(patientFiles.patientId, patientId)));
   await logAudit({ userId: session.user.id, action: "update", entityType: "patient_file", entityId: fileId, details: { patientId, category } });
   revalidatePath(`/pacientes/${patientId}`);
   return { success: true };
@@ -144,7 +144,7 @@ export async function bulkUpdatePatientFileLabel(fileIds: string[], patientId: s
   if (fileIds.length === 0) return { error: "Sin archivos seleccionados." };
 
   const trimmed = label?.trim() || null;
-  await db.update(patientFiles).set({ label: trimmed }).where(inArray(patientFiles.id, fileIds));
+  await db.update(patientFiles).set({ label: trimmed }).where(and(inArray(patientFiles.id, fileIds), eq(patientFiles.patientId, patientId)));
   await logAudit({ userId: session.user.id, action: "update", entityType: "patient_file", details: { patientId, bulkLabel: trimmed, count: fileIds.length } });
   revalidatePath(`/pacientes/${patientId}`);
   return { success: true };
@@ -159,7 +159,7 @@ export async function bulkUpdatePatientFileCategory(fileIds: string[], patientId
   const valid = ["general", "evaluacion", "informe", "consentimiento", "otro"];
   if (!valid.includes(category)) return { error: "Categoría inválida." };
 
-  await db.update(patientFiles).set({ category: category as "general" | "evaluacion" | "informe" | "consentimiento" | "otro" }).where(inArray(patientFiles.id, fileIds));
+  await db.update(patientFiles).set({ category: category as "general" | "evaluacion" | "informe" | "consentimiento" | "otro" }).where(and(inArray(patientFiles.id, fileIds), eq(patientFiles.patientId, patientId)));
   await logAudit({ userId: session.user.id, action: "update", entityType: "patient_file", details: { patientId, bulkCategory: category, count: fileIds.length } });
   revalidatePath(`/pacientes/${patientId}`);
   return { success: true };

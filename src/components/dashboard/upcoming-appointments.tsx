@@ -20,10 +20,11 @@ interface UpcomingAppointmentsProps {
 
 function formatDate(raw: Date | string): { day: string; time: string; weekday: string } {
   const d = typeof raw === "string" ? new Date(raw) : raw;
+  const tz = "America/Santiago";
   return {
-    day: d.toLocaleDateString("es-CL", { day: "numeric", month: "short" }),
-    time: d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }),
-    weekday: d.toLocaleDateString("es-CL", { weekday: "short" }),
+    day: d.toLocaleDateString("es-CL", { timeZone: tz, day: "numeric", month: "short" }),
+    time: d.toLocaleTimeString("es-CL", { timeZone: tz, hour: "2-digit", minute: "2-digit" }),
+    weekday: d.toLocaleDateString("es-CL", { timeZone: tz, weekday: "short" }),
   };
 }
 
@@ -46,7 +47,7 @@ export function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps
           <Link
             key={appt.id}
             href={`/citas/${appt.id}`}
-            className="flex items-center gap-3 py-2.5 hover:bg-muted/40 -mx-2 px-2 rounded-lg transition-colors"
+            className="flex items-center gap-3 py-2.5 hover:bg-muted/40 -mx-2 px-2 rounded-xl transition-colors"
           >
             <div className="w-10 text-center shrink-0">
               <p className="text-xs font-bold text-muted-foreground uppercase">{weekday}</p>
@@ -59,7 +60,7 @@ export function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps
             </div>
             <span className="text-xs tabular-nums text-muted-foreground font-medium shrink-0">{time}</span>
             {appt.modality === "online" ? (
-              <Video className="h-4 w-4 text-rasma-dark shrink-0" />
+              <Video className="h-4 w-4 text-muted-foreground shrink-0" />
             ) : (
               <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
             )}
@@ -69,7 +70,7 @@ export function UpcomingAppointments({ appointments }: UpcomingAppointmentsProps
 
       <Link
         href="/citas"
-        className="flex items-center justify-center gap-1.5 pt-3 mt-2 border-t text-sm font-semibold text-rasma-teal hover:underline hover:text-rasma-teal"
+        className="flex items-center justify-center gap-1.5 pt-3 mt-2 border-t text-sm font-semibold text-rasma-dark hover:underline"
       >
         Ver todas
         <ArrowRight className="h-4 w-4" />

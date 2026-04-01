@@ -76,8 +76,8 @@ export default async function GastosPage({
       value: `$${stats.totalAllTime.toLocaleString("es-CL")}`,
       sub: `${stats.countAllTime} gastos`,
       icon: DollarSign,
-      color: "text-rasma-teal",
-      bg: "bg-rasma-teal/10",
+      color: "text-rasma-dark",
+      bg: "bg-zinc-100",
     },
   ];
 
@@ -90,8 +90,8 @@ export default async function GastosPage({
           <div className="flex items-center gap-2">
             <ExpenseExport />
             <Link href="/gastos/nuevo">
-              <Button>
-                <Wallet className="mr-2 h-4 w-4" /> Nuevo Gasto
+              <Button className="h-11 px-5 text-base font-semibold rounded-xl gap-2 bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90">
+                <Wallet className="h-5 w-5" /> Nuevo Gasto
               </Button>
             </Link>
           </div>
@@ -139,25 +139,28 @@ export default async function GastosPage({
       <ExpenseTable expenses={expenses} />
 
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+        <div className="flex justify-center gap-1 pt-4">
+          {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+            let pageNum: number;
+            if (totalPages <= 7) pageNum = i + 1;
+            else if (currentPage <= 4) pageNum = i + 1;
+            else if (currentPage >= totalPages - 3) pageNum = totalPages - 6 + i;
+            else pageNum = currentPage - 3 + i;
             const urlParams = new URLSearchParams();
             if (params.category) urlParams.set("category", params.category);
             if (params.dateFrom) urlParams.set("dateFrom", params.dateFrom);
             if (params.dateTo) urlParams.set("dateTo", params.dateTo);
             if (params.search) urlParams.set("search", params.search);
-            urlParams.set("page", String(p));
+            urlParams.set("page", String(pageNum));
             return (
               <Link
-                key={p}
+                key={pageNum}
                 href={`/gastos?${urlParams.toString()}`}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  p === currentPage
-                    ? "bg-rasma-dark text-rasma-lime"
-                    : "bg-muted hover:bg-muted/80"
+                className={`h-9 w-9 flex items-center justify-center rounded-xl text-sm font-medium transition-colors ${
+                  pageNum === currentPage ? "bg-rasma-dark text-rasma-lime" : "text-muted-foreground hover:bg-zinc-100"
                 }`}
               >
-                {p}
+                {pageNum}
               </Link>
             );
           })}

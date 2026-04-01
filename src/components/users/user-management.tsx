@@ -94,7 +94,6 @@ interface User {
 export function UserManagement({ users }: { users: User[] }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
   const [bulkPending, startBulkTransition] = useTransition();
@@ -133,9 +132,8 @@ export function UserManagement({ users }: { users: User[] }) {
   const handleResetPassword = async (userId: string, userName: string) => {
     try {
       const result = await adminResetPassword(userId);
-      if (result.success && result.tempPassword) {
-        setTempPassword(result.tempPassword);
-        toast.success(`Contraseña restablecida para ${userName}`);
+      if (result.success) {
+        toast.success(`Nueva contraseña enviada por email a ${userName}`);
       }
     } catch {
       toast.error("Error al restablecer la contraseña.");
@@ -437,39 +435,6 @@ export function UserManagement({ users }: { users: User[] }) {
         </Dialog>
       )}
 
-      {/* Temp password dialog */}
-      {tempPassword && (
-        <Dialog open={!!tempPassword} onOpenChange={() => setTempPassword(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Contraseña Temporal</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                La nueva contraseña temporal es:
-              </p>
-              <div className="flex items-center gap-2 rounded-lg bg-muted p-3 font-mono">
-                <span className="flex-1">{tempPassword}</span>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => {
-                    navigator.clipboard.writeText(tempPassword);
-                    toast.success("Copiado al portapapeles");
-                  }}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Comparta esta contraseña de forma segura. El usuario deberá
-                cambiarla al iniciar sesión.
-              </p>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
       {/* Deactivate user confirmation */}
       <AlertDialog open={!!deactivateTarget} onOpenChange={(open) => !open && setDeactivateTarget(null)}>
         <AlertDialogContent>
@@ -503,7 +468,7 @@ export function UserManagement({ users }: { users: User[] }) {
       </AlertDialog>
 
       {/* Professionals table — matches asset design */}
-      <div className="rounded-xl border bg-card">
+      <div className="rounded-2xl border bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">

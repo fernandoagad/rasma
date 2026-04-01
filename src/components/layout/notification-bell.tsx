@@ -97,7 +97,7 @@ export function NotificationBell() {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="text-xs text-rasma-teal hover:underline"
+              className="text-xs text-rasma-dark font-medium hover:underline"
             >
               Marcar todo como leído
             </button>

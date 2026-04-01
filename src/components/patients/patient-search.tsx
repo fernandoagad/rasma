@@ -35,7 +35,7 @@ export function PatientSearch() {
   );
 
   return (
-    <div className="flex flex-col sm:flex-row gap-3">
+    <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-2xl border bg-white">
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -47,18 +47,18 @@ export function PatientSearch() {
             }, 300);
             return () => clearTimeout(timeout);
           }}
-          className="pl-9"
+          className="pl-9 h-10 rounded-xl border-zinc-200 bg-zinc-50/50 focus:bg-white transition-colors"
         />
       </div>
       <Select
         defaultValue={searchParams.get("status") || "all"}
         onValueChange={(value) => updateParams("status", value)}
       >
-        <SelectTrigger className="w-full sm:w-40">
+        <SelectTrigger className="w-full sm:w-44 h-10 rounded-xl border-zinc-200 bg-zinc-50/50">
           <SelectValue placeholder={UI.patients.status} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
+          <SelectItem value="all">Todos los estados</SelectItem>
           {Object.entries(UI.patients.statuses).map(([value, label]) => (
             <SelectItem key={value} value={value}>
               {label}

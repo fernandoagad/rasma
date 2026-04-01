@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Video, MapPin, Clock, Check, X, CircleDot, ChevronRight } from "lucide-react";
+import { Video, MapPin, Clock, Check, X, CircleDot, ChevronRight, Calendar, Plus } from "lucide-react";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { Button } from "@/components/ui/button";
 
@@ -25,7 +25,7 @@ interface TodayScheduleProps {
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString("es-CL", { timeZone: "America/Santiago", hour: "2-digit", minute: "2-digit" });
 }
 
 function getTiming(iso: string, duration: number): "past" | "current" | "upcoming" {
@@ -47,16 +47,21 @@ const statusIcon: Record<string, { icon: typeof Check; color: string }> = {
 export function TodaySchedule({ appointments, userRole }: TodayScheduleProps) {
   if (appointments.length === 0) {
     return (
-      <div className="flex items-center gap-4 py-8 justify-center">
-        <div className="h-12 w-12 rounded-xl bg-muted/60 flex items-center justify-center shrink-0">
-          <Clock className="h-6 w-6 text-muted-foreground/50" />
+      <div className="flex flex-col items-center gap-4 py-12">
+        <div className="h-16 w-16 rounded-2xl bg-zinc-100 flex items-center justify-center">
+          <Calendar className="h-8 w-8 text-zinc-300" />
         </div>
-        <div>
-          <p className="text-base font-medium text-foreground/60">Sin citas hoy</p>
-          <Link href="/citas/nueva" className="text-sm text-rasma-teal hover:underline font-medium">
-            Agendar una cita
-          </Link>
+        <div className="text-center">
+          <p className="text-base font-semibold text-rasma-dark">Sin citas hoy</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Tu agenda esta libre</p>
         </div>
+        <Link
+          href="/citas/nueva"
+          className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-rasma-dark text-rasma-lime text-sm font-semibold hover:bg-rasma-dark/90 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          Agendar cita
+        </Link>
       </div>
     );
   }
@@ -132,7 +137,7 @@ export function TodaySchedule({ appointments, userRole }: TodayScheduleProps) {
                 {appt.modality === "online" && appt.meetingLink && appt.status === "programada" ? (
                   <Button
                     size="sm"
-                    className={`h-8 px-3 text-xs gap-1.5 rounded-lg font-semibold ${
+                    className={`h-8 px-3 text-xs gap-1.5 rounded-xl font-semibold ${
                       isCurrent
                         ? "bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90 shadow-sm"
                         : "bg-zinc-100 text-rasma-dark hover:bg-zinc-200"
@@ -146,9 +151,7 @@ export function TodaySchedule({ appointments, userRole }: TodayScheduleProps) {
                     </a>
                   </Button>
                 ) : (
-                  <span className={`flex items-center gap-1.5 text-sm ${
-                    appt.modality === "online" ? "text-rasma-dark" : "text-muted-foreground"
-                  }`}>
+                  <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     {appt.modality === "online" ? <Video className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
                   </span>
                 )}

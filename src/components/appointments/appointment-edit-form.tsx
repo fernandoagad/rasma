@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { createAppointment } from "@/actions/appointments";
+import { updateAppointment } from "@/actions/appointments";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -24,22 +23,40 @@ import {
   Users,
   Video,
   MapPin,
-  Repeat,
   Search,
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Save,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { toast } from "sonner";
+import { formatChileTime, CHILE_TZ } from "@/lib/timezone";
+
+interface AppointmentData {
+  id: string;
+  patientId: string;
+  therapistId: string;
+  dateTime: string; // ISO string
+  durationMinutes: number;
+  status: string;
+  sessionType: string;
+  modality: string;
+  location: string | null;
+  meetingLink: string | null;
+  notes: string | null;
+  price: number | null;
+  patient: { id: string; firstName: string; lastName: string };
+  therapist: { id: string; name: string };
+}
 
 interface Props {
+  appointment: AppointmentData;
   therapists: { id: string; name: string; email: string }[];
   patients: { id: string; firstName: string; lastName: string; rut: string | null }[];
   userId: string;
   userRole: string;
-  defaultDate?: string;
 }
 
 const SESSION_TYPES = [
@@ -78,7 +95,7 @@ const AFTERNOON_TIMES = [
 function getMonthGrid(year: number, month: number): (Date | null)[][] {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
-  const startDow = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Monday=0
+  const startDow = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
 
   const weeks: (Date | null)[][] = [];
   let currentWeek: (Date | null)[] = [];
@@ -105,43 +122,42 @@ function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-function isPastDate(date: Date): boolean {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d < today;
-}
-
-export function AppointmentForm({ therapists, patients, userId, userRole, defaultDate }: Props) {
-  const [state, action, pending] = useActionState(createAppointment, undefined);
+export function AppointmentEditForm({ appointment, therapists, patients, userId, userRole }: Props) {
+  const updateWithId = updateAppointment.bind(null, appointment.id);
+  const [state, action, pending] = useActionState(updateWithId, undefined);
   const router = useRouter();
 
+  // Parse existing dateTime in Chile timezone for defaults
+  const existingDt = new Date(appointment.dateTime);
+  const existingChileTime = formatChileTime(existingDt);
+
+  // Extract Chile-local date components for the calendar picker
+  const chileParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: CHILE_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(existingDt);
+  const getP = (t: string) => Number(chileParts.find((p) => p.type === t)?.value || 0);
+  const initialDate = new Date(getP("year"), getP("month") - 1, getP("day"));
+
+  const [patientId, setPatientId] = useState(appointment.patientId);
   const [patientSearch, setPatientSearch] = useState("");
-  const [patientId, setPatientId] = useState("");
-  const [therapistId, setTherapistId] = useState(userRole === "terapeuta" ? userId : "");
-  const [modality, setModality] = useState("presencial");
-  const [sessionType, setSessionType] = useState("individual");
-  const [duration, setDuration] = useState("50");
-  const [isRecurring, setIsRecurring] = useState(false);
+  const [therapistId, setTherapistId] = useState(appointment.therapistId);
+  const [modality, setModality] = useState(appointment.modality);
+  const [sessionType, setSessionType] = useState(appointment.sessionType);
+  const [duration, setDuration] = useState(String(appointment.durationMinutes));
   const [showPatientList, setShowPatientList] = useState(false);
 
   // Date/time picker state
-  const defaultParsed = defaultDate ? new Date(defaultDate) : null;
-  const [selectedDate, setSelectedDate] = useState<Date | null>(
-    defaultParsed && !isNaN(defaultParsed.getTime()) ? defaultParsed : null
-  );
-  const [selectedTime, setSelectedTime] = useState<string>(
-    defaultParsed && !isNaN(defaultParsed.getTime())
-      ? `${String(defaultParsed.getHours()).padStart(2, "0")}:${String(defaultParsed.getMinutes()).padStart(2, "0")}`
-      : ""
-  );
-  const [calendarMonth, setCalendarMonth] = useState(() => {
-    const d = defaultParsed && !isNaN(defaultParsed.getTime()) ? defaultParsed : new Date();
-    return { year: d.getFullYear(), month: d.getMonth() };
+  const [selectedDate, setSelectedDate] = useState<Date | null>(initialDate);
+  const [selectedTime, setSelectedTime] = useState<string>(existingChileTime);
+  const [calendarMonth, setCalendarMonth] = useState({
+    year: initialDate.getFullYear(),
+    month: initialDate.getMonth(),
   });
 
-  // Combine date + time into datetime-local format for hidden input
+  // Combine date + time into datetime-local format
   const dateTimeValue = useMemo(() => {
     if (!selectedDate || !selectedTime) return "";
     const y = selectedDate.getFullYear();
@@ -152,12 +168,10 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
 
   useEffect(() => {
     if (state?.success) {
-      if (state.warning) {
-        toast.warning(state.warning);
-      }
-      router.push("/citas");
+      toast.success("Cita actualizada correctamente");
+      router.push(`/citas/${appointment.id}`);
     }
-  }, [state?.success, state?.warning, router]);
+  }, [state?.success, router, appointment.id]);
 
   const filteredPatients = useMemo(() => {
     if (!patientSearch) return patients;
@@ -198,7 +212,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
 
   return (
     <form action={action} className="space-y-6">
-      {/* Hidden fields for form submission */}
+      {/* Hidden fields */}
       <input type="hidden" name="patientId" value={patientId} />
       <input type="hidden" name="therapistId" value={therapistId} />
       <input type="hidden" name="modality" value={modality} />
@@ -206,7 +220,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
       <input type="hidden" name="durationMinutes" value={duration} />
       <input type="hidden" name="dateTime" value={dateTimeValue} />
 
-      {/* Step 1: Patient */}
+      {/* Patient */}
       <Card>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
@@ -220,9 +234,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
                 <AvatarInitials name={`${selectedPatient.firstName} ${selectedPatient.lastName}`} size="sm" />
                 <div>
                   <p className="text-sm font-medium">{selectedPatient.firstName} {selectedPatient.lastName}</p>
-                  {selectedPatient.rut && (
-                    <p className="text-xs text-muted-foreground">{selectedPatient.rut}</p>
-                  )}
+                  {selectedPatient.rut && <p className="text-xs text-muted-foreground">{selectedPatient.rut}</p>}
                 </div>
               </div>
               <Button type="button" variant="ghost" size="sm" onClick={() => { setPatientId(""); setPatientSearch(""); }}>
@@ -268,7 +280,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
         </CardContent>
       </Card>
 
-      {/* Step 2: Therapist & Type */}
+      {/* Therapist & Session Type */}
       <Card>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
@@ -281,10 +293,10 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
           <div className="space-y-4">
             {userRole === "terapeuta" ? (
               <div className="flex items-center gap-3 p-3 rounded-xl border bg-muted/30">
-                <AvatarInitials name={therapists.find(t => t.id === userId)?.name || "Terapeuta"} size="sm" />
+                <AvatarInitials name={therapists.find((t) => t.id === userId)?.name || "Terapeuta"} size="sm" />
                 <div>
                   <p className="text-xs text-muted-foreground">Terapeuta asignado</p>
-                  <p className="text-sm font-medium">{therapists.find(t => t.id === userId)?.name || "Usted"}</p>
+                  <p className="text-sm font-medium">{therapists.find((t) => t.id === userId)?.name || "Usted"}</p>
                 </div>
               </div>
             ) : (
@@ -296,9 +308,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
                   </SelectTrigger>
                   <SelectContent>
                     {therapists.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name}
-                      </SelectItem>
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -330,7 +340,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
         </CardContent>
       </Card>
 
-      {/* Step 3: Date, Time & Duration */}
+      {/* Date, Time & Duration */}
       <Card>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
@@ -339,7 +349,6 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6">
-            {/* Left: Calendar + Time Picker */}
             <div className="space-y-4">
               {/* Mini calendar */}
               <div className="rounded-xl border p-3">
@@ -355,19 +364,14 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
 
                 <div className="grid grid-cols-7 gap-0.5 mb-1">
                   {DAY_NAMES.map((d) => (
-                    <div key={d} className="text-center text-xs font-bold text-muted-foreground py-1">
-                      {d}
-                    </div>
+                    <div key={d} className="text-center text-xs font-bold text-muted-foreground py-1">{d}</div>
                   ))}
                 </div>
 
                 {monthGrid.map((week, wi) => (
                   <div key={wi} className="grid grid-cols-7 gap-0.5">
                     {week.map((date, di) => {
-                      if (!date) {
-                        return <div key={di} className="h-8" />;
-                      }
-                      const past = isPastDate(date);
+                      if (!date) return <div key={di} className="h-8" />;
                       const isToday = isSameDay(date, today);
                       const isSelected = selectedDate && isSameDay(date, selectedDate);
 
@@ -375,12 +379,10 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
                         <button
                           key={di}
                           type="button"
-                          disabled={past}
                           onClick={() => setSelectedDate(date)}
                           className={cn(
                             "h-8 w-full rounded-md text-xs font-medium transition-all",
-                            past && "text-muted-foreground/30 cursor-not-allowed",
-                            !past && !isSelected && "hover:bg-muted",
+                            !isSelected && "hover:bg-muted",
                             isToday && !isSelected && "text-rasma-dark font-bold",
                             isSelected && "bg-rasma-dark text-rasma-lime"
                           )}
@@ -448,7 +450,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
               )}
             </div>
 
-            {/* Right: Duration */}
+            {/* Duration */}
             <div className="lg:w-48">
               <Label className="text-xs text-muted-foreground mb-1.5">
                 <Clock className="inline h-3.5 w-3.5 mr-1" />
@@ -491,66 +493,10 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
               </div>
             </div>
           )}
-
         </CardContent>
       </Card>
 
-      {/* ─── RECURRING: Big, unmissable card ─── */}
-      <div className={cn(
-        "rounded-2xl border-2 p-6 transition-all",
-        isRecurring
-          ? "border-rasma-dark bg-zinc-50"
-          : "border border-border bg-white"
-      )}>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className={cn(
-              "h-12 w-12 rounded-xl flex items-center justify-center shrink-0 transition-colors",
-              isRecurring ? "bg-rasma-dark text-white" : "bg-rasma-gray-200 text-rasma-gray-700"
-            )}>
-              <Repeat className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-rasma-dark">Cita recurrente</p>
-              <p className="text-sm text-muted-foreground">
-                {isRecurring
-                  ? "Esta cita se repetira automaticamente cada semana"
-                  : "Activar para repetir esta cita semanalmente"
-                }
-              </p>
-            </div>
-          </div>
-          <Switch
-            checked={isRecurring}
-            onCheckedChange={setIsRecurring}
-            className="scale-125"
-          />
-        </div>
-
-        {isRecurring && (
-          <div className="mt-5 pt-5 border-t-2 border-zinc-200">
-            <div className="flex items-center gap-4 flex-wrap">
-              <Label className="text-sm font-bold text-rasma-dark">Repetir por</Label>
-              <Select defaultValue="4">
-                <SelectTrigger className="w-48 h-11 border-zinc-300 bg-white text-base font-medium">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[2, 4, 6, 8, 10, 12].map((w) => (
-                    <SelectItem key={w} value={String(w)}>{w} semanas ({w} sesiones)</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="mt-3 flex items-center gap-2 text-sm text-rasma-dark font-medium">
-              <Calendar className="h-4 w-4" />
-              <span>Se crearan multiples citas con el mismo horario y configuracion</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Step 4: Modality */}
+      {/* Modality */}
       <Card>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
@@ -607,25 +553,23 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
           {modality === "presencial" && (
             <div className="mt-4">
               <Label className="text-xs text-muted-foreground mb-1.5">Ubicacion (opcional)</Label>
-              <Input name="location" placeholder="Ej: Consultorio 3, Av. Providencia 1234" />
+              <Input name="location" placeholder="Ej: Consultorio 3, Av. Providencia 1234" defaultValue={appointment.location || ""} />
             </div>
           )}
 
-          {modality === "online" && (
+          {modality === "online" && appointment.meetingLink && (
             <div className="mt-4 p-3 rounded-xl bg-zinc-50 border border-border">
               <div className="flex items-center gap-2">
                 <Video className="h-4 w-4 text-rasma-dark" />
-                <p className="text-sm text-rasma-dark font-medium">Link de Google Meet se generara automaticamente</p>
+                <p className="text-sm text-rasma-dark font-medium">Link de Google Meet existente</p>
               </div>
-              <p className="text-xs text-muted-foreground mt-1 ml-6">
-                Se creara un evento en Google Calendar con enlace de reunion al guardar la cita.
-              </p>
+              <p className="text-xs text-muted-foreground mt-1 ml-6 truncate">{appointment.meetingLink}</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Step 5: Price */}
+      {/* Price */}
       <Card>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
@@ -643,14 +587,14 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
                 step="1000"
                 placeholder="Ej: 35000"
                 className="pl-7"
+                defaultValue={appointment.price || ""}
               />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Se usara para generar el cobro correspondiente</p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Step 6: Notes */}
+      {/* Notes */}
       <Card>
         <CardContent>
           <div className="flex items-center gap-2 mb-4">
@@ -662,6 +606,7 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
             rows={3}
             placeholder="Motivo de consulta, instrucciones especiales..."
             className="resize-none"
+            defaultValue={appointment.notes || ""}
           />
         </CardContent>
       </Card>
@@ -691,12 +636,12 @@ export function AppointmentForm({ therapists, patients, userId, userRole, defaul
           {pending ? (
             <>
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Creando cita...
+              Guardando...
             </>
           ) : (
             <>
-              <Calendar className="mr-2 h-5 w-5" />
-              Crear Cita
+              <Save className="mr-2 h-5 w-5" />
+              Guardar Cambios
             </>
           )}
         </Button>

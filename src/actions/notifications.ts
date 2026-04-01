@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import { requireStaff } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { systemSettings, notificationPreferences } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -114,8 +115,7 @@ export async function sendTestNotification(): Promise<{ error?: string; success?
 // ============================================================
 
 export async function getPatientNotificationPrefs(patientId: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("No autorizado.");
+  await requireStaff();
 
   const prefs = await db.query.notificationPreferences.findFirst({
     where: eq(notificationPreferences.patientId, patientId),
@@ -134,8 +134,7 @@ export async function updatePatientNotificationPrefs(
   _prev: { error?: string; success?: boolean } | undefined,
   formData: FormData
 ): Promise<{ error?: string; success?: boolean }> {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "No autorizado." };
+  const session = await requireStaff();
 
   const patientId = formData.get("patientId") as string;
   if (!patientId) return { error: "Paciente no especificado." };

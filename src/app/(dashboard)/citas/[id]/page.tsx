@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Users,
   Repeat,
+  Pencil,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { AppointmentStatusButtons } from "@/components/appointments/appointment-status-buttons";
 import { RecurringSeriesCard } from "@/components/appointments/recurring-series-card";
+import { formatChileTime, formatChileDate } from "@/lib/timezone";
 
 export default async function CitaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -65,19 +67,29 @@ export default async function CitaDetailPage({ params }: { params: Promise<{ id:
                 )}
               </div>
             </div>
-            <StatusBadge type="appointment" status={appointment.status} />
+            <div className="flex items-center gap-2">
+              <StatusBadge type="appointment" status={appointment.status} />
+              {appointment.status === "programada" && (
+                <Link href={`/citas/${appointment.id}/editar`}>
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <Pencil className="h-3.5 w-3.5" />
+                    Editar
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
 
           {/* Info grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/40 border">
-              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-zinc-100 text-rasma-dark shrink-0">
+              <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-zinc-100 text-rasma-dark shrink-0">
                 <Calendar className="h-5 w-5" />
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Fecha</p>
                 <p className="text-sm font-semibold capitalize mt-0.5">
-                  {dt.toLocaleDateString("es-CL", {
+                  {formatChileDate(dt, {
                     weekday: "long",
                     day: "numeric",
                     month: "long",
@@ -88,22 +100,22 @@ export default async function CitaDetailPage({ params }: { params: Promise<{ id:
             </div>
 
             <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/40 border">
-              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-zinc-100 text-rasma-dark shrink-0">
+              <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-zinc-100 text-rasma-dark shrink-0">
                 <Clock className="h-5 w-5" />
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Horario</p>
                 <p className="text-sm font-semibold mt-0.5">
-                  {dt.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
+                  {formatChileTime(dt)}
                   {" \u2013 "}
-                  {endTime.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
+                  {formatChileTime(endTime)}
                   <span className="text-muted-foreground font-normal ml-1">({appointment.durationMinutes} min)</span>
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/40 border">
-              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-zinc-100 text-rasma-dark shrink-0">
+              <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-zinc-100 text-rasma-dark shrink-0">
                 <User className="h-5 w-5" />
               </div>
               <div className="min-w-0">
@@ -113,7 +125,7 @@ export default async function CitaDetailPage({ params }: { params: Promise<{ id:
             </div>
 
             <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/40 border">
-              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-zinc-100 text-rasma-dark shrink-0">
+              <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-zinc-100 text-rasma-dark shrink-0">
                 <Users className="h-5 w-5" />
               </div>
               <div className="min-w-0">
@@ -174,7 +186,7 @@ export default async function CitaDetailPage({ params }: { params: Promise<{ id:
         <Card>
           <CardContent>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Notas</p>
-            <p className="text-sm leading-relaxed bg-muted/40 rounded-lg p-3.5 border">{appointment.notes}</p>
+            <p className="text-sm leading-relaxed bg-muted/40 rounded-xl p-3.5 border">{appointment.notes}</p>
           </CardContent>
         </Card>
       )}

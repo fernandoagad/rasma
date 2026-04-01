@@ -150,11 +150,20 @@ export async function updateSessionNote(
     return { error: "No autorizado." };
   }
 
+  const parsed = noteSchema.omit({ appointmentId: true }).safeParse({
+    subjective: formData.get("subjective"),
+    objective: formData.get("objective"),
+    assessment: formData.get("assessment"),
+    plan: formData.get("plan"),
+  });
+
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
   const content = JSON.stringify({
-    subjective: formData.get("subjective") || "",
-    objective: formData.get("objective") || "",
-    assessment: formData.get("assessment") || "",
-    plan: formData.get("plan") || "",
+    subjective: parsed.data.subjective || "",
+    objective: parsed.data.objective || "",
+    assessment: parsed.data.assessment || "",
+    plan: parsed.data.plan || "",
   });
 
   const { encrypted, iv, tag } = encrypt(content);

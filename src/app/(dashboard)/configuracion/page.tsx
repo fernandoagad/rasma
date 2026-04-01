@@ -62,24 +62,24 @@ export default async function ConfiguracionPage() {
           const Icon = item.icon;
           if (item.disabled) {
             return (
-              <Card key={item.title} className="opacity-50">
-                <CardContent className="pt-2">
+              <Card key={item.title} className="opacity-40 rounded-2xl">
+                <CardContent className="pt-4">
                   <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center mb-3">
                     <Icon className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <h3 className="font-semibold text-rasma-dark">{item.title}</h3>
                   <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
-                  <span className="text-xs text-muted-foreground mt-2 inline-block">Próximamente</span>
+                  <span className="text-xs text-muted-foreground mt-2 inline-block">Proximamente</span>
                 </CardContent>
               </Card>
             );
           }
           return (
             <Link key={item.title} href={item.href}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                <CardContent className="pt-2">
-                  <div className="h-10 w-10 rounded-xl bg-zinc-100 flex items-center justify-center mb-3">
-                    <Icon className="h-5 w-5 text-rasma-dark" />
+              <Card className="hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer h-full rounded-2xl">
+                <CardContent className="pt-4">
+                  <div className="h-10 w-10 rounded-xl bg-rasma-dark text-rasma-lime flex items-center justify-center mb-3">
+                    <Icon className="h-5 w-5" />
                   </div>
                   <h3 className="font-semibold text-rasma-dark">{item.title}</h3>
                   <p className="text-sm text-muted-foreground mt-1">{item.description}</p>

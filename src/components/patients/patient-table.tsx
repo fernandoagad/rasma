@@ -142,7 +142,7 @@ export function PatientTable({ patients, therapists = [], userRole }: { patients
     <div className="space-y-3">
       {/* Bulk actions bar */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-zinc-50 px-4 py-2.5 flex-wrap">
+        <div className="flex items-center gap-3 rounded-2xl border border-rasma-dark/20 bg-rasma-dark/[0.03] px-5 py-3 flex-wrap">
           <span className="text-sm font-medium">
             {selectedIds.size} {UI.bulk.selected}
           </span>
@@ -192,7 +192,7 @@ export function PatientTable({ patients, therapists = [], userRole }: { patients
         </div>
       )}
 
-      <div className="rounded-xl border bg-card">
+      <div className="rounded-2xl border bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">

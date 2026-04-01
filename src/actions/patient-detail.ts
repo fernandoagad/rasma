@@ -1,12 +1,13 @@
 "use server";
 
-import { requireStaff } from "@/lib/authorization";
+import { requireStaff, requirePatientAccess } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { appointments, payments, sessionNotes, treatmentPlans, users, patients, careTeamMembers } from "@/lib/db/schema";
 import { eq, and, desc, sql, isNull, gte } from "drizzle-orm";
 
 export async function getPatientSummary(patientId: string) {
-  await requireStaff();
+  const session = await requireStaff();
+  await requirePatientAccess(session, patientId);
   const now = new Date();
 
   const [
@@ -114,7 +115,7 @@ export async function getPatientSummary(patientId: string) {
 }
 
 export async function getPatientAppointments(patientId: string) {
-  await requireStaff();
+  const s = await requireStaff(); await requirePatientAccess(s, patientId);
   return db
     .select({
       id: appointments.id,
@@ -136,7 +137,7 @@ export async function getPatientAppointments(patientId: string) {
 }
 
 export async function getPatientPayments(patientId: string) {
-  await requireStaff();
+  const s = await requireStaff(); await requirePatientAccess(s, patientId);
   return db
     .select({
       id: payments.id,
@@ -152,7 +153,7 @@ export async function getPatientPayments(patientId: string) {
 }
 
 export async function getPatientNotes(patientId: string) {
-  await requireStaff();
+  const s = await requireStaff(); await requirePatientAccess(s, patientId);
   return db
     .select({
       id: sessionNotes.id,
@@ -173,7 +174,7 @@ export async function getPatientNotes(patientId: string) {
 }
 
 export async function getPatientPlans(patientId: string) {
-  await requireStaff();
+  const s = await requireStaff(); await requirePatientAccess(s, patientId);
   return db.query.treatmentPlans.findMany({
     where: eq(treatmentPlans.patientId, patientId),
     with: {

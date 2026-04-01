@@ -4,16 +4,14 @@ import { db } from "@/lib/db";
 import { appointments } from "@/lib/db/schema";
 import { gte, lte, and, eq } from "drizzle-orm";
 import { CalendarView } from "@/components/calendar/calendar-view";
-import { PageHeader } from "@/components/ui/page-header";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, CalendarDays } from "lucide-react";
 
 export default async function CalendarioPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  // Fetch appointments for a 3-month window (prev month to next month)
   const now = new Date();
   const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const endDate = new Date(now.getFullYear(), now.getMonth() + 2, 0);
@@ -23,7 +21,6 @@ export default async function CalendarioPage() {
     lte(appointments.dateTime, endDate),
   ];
 
-  // Therapists only see their own appointments
   if (session.user.role === "terapeuta") {
     conditions.push(eq(appointments.therapistId, session.user.id));
   }
@@ -37,7 +34,6 @@ export default async function CalendarioPage() {
     orderBy: (a, { asc }) => [asc(a.dateTime)],
   });
 
-  // Serialize dates as ISO strings for client component
   const calendarAppointments = data.map((a) => ({
     id: a.id,
     patientName: `${a.patient.firstName} ${a.patient.lastName}`,
@@ -48,22 +44,38 @@ export default async function CalendarioPage() {
     sessionType: a.sessionType,
     modality: a.modality,
     meetingLink: a.meetingLink,
+    recurringGroupId: a.recurringGroupId,
   }));
 
+  const todayCount = data.filter((a) => {
+    const d = new Date(a.dateTime);
+    return d.toDateString() === now.toDateString() && a.status === "programada";
+  }).length;
+
   return (
-    <div className="space-y-6 max-w-[1440px] mx-auto">
-      <PageHeader
-        title="Calendario"
-        subtitle="Vista de citas y reuniones"
-        action={
-          <Link href="/citas/nueva">
-            <Button className="bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90">
-              <Plus className="mr-2 h-4 w-4" />
-              Nueva Cita
-            </Button>
-          </Link>
-        }
-      />
+    <div className="space-y-5 max-w-[1440px] mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-rasma-dark text-rasma-lime flex items-center justify-center">
+            <CalendarDays className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-rasma-dark tracking-tight">Calendario</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Vista de citas y reuniones
+              {todayCount > 0 && (
+                <> · <span className="font-medium text-rasma-dark">{todayCount} hoy</span></>
+              )}
+            </p>
+          </div>
+        </div>
+        <Link href="/citas/nueva">
+          <Button className="h-11 px-5 text-base font-semibold rounded-xl gap-2 bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90">
+            <Plus className="h-5 w-5" />
+            Nueva Cita
+          </Button>
+        </Link>
+      </div>
       <CalendarView appointments={calendarAppointments} />
     </div>
   );

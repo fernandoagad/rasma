@@ -237,7 +237,7 @@ export function ExpenseTable({ expenses }: { expenses: Expense[] }) {
           description="Registra un nuevo gasto para comenzar."
         />
       ) : (
-        <div className="rounded-xl border bg-card">
+        <div className="rounded-2xl border bg-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">

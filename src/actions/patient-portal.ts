@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { appointments, careTeamMembers } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { logAudit } from "@/lib/audit";
 
 // Get appointments for the currently logged-in patient
 export async function getMyAppointments() {
@@ -51,6 +52,14 @@ export async function cancelMyAppointment(appointmentId: string) {
     .update(appointments)
     .set({ status: "cancelada", updatedAt: new Date() })
     .where(eq(appointments.id, appointmentId));
+
+  await logAudit({
+    userId: session.user.id,
+    action: "cancel",
+    entityType: "appointment",
+    entityId: appointmentId,
+    details: { cancelledBy: "patient" },
+  });
 
   return { success: true };
 }

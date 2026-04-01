@@ -13,6 +13,7 @@ import {
   registerSchema,
 } from "@/lib/validations/auth";
 import { sendPasswordResetCode, sendPasswordChangedNotification, sendRegistrationWelcome, sendLoginAlert } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { logAudit } from "@/lib/audit";
 import { AuthError } from "next-auth";
 
@@ -135,6 +136,9 @@ export async function registerAction(
 // ── Email verification after registration ──
 
 export async function verifyRegistrationEmail(email: string, code: string) {
+  const rl = checkRateLimit(`verify:${email.toLowerCase()}`);
+  if (!rl.allowed) return { error: "Demasiados intentos. Espere 15 minutos." };
+
   if (!code || code.length !== 6) {
     return { error: "Ingrese el codigo de 6 digitos." };
   }
@@ -185,6 +189,9 @@ export async function verifyRegistrationEmail(email: string, code: string) {
 }
 
 export async function resendVerificationCode(email: string) {
+  const rl = checkRateLimit(`resend:${email?.toLowerCase() || "unknown"}`);
+  if (!rl.allowed) return { error: "Demasiados intentos. Espere 15 minutos." };
+
   const normalizedEmail = email.toLowerCase();
 
   const user = await db.query.users.findFirst({
@@ -214,6 +221,9 @@ export async function resendVerificationCode(email: string) {
 // ── Code-based password recovery ──
 
 export async function requestPasswordResetCode(email: string) {
+  const rl = checkRateLimit(`reset:${email?.toLowerCase() || "unknown"}`);
+  if (!rl.allowed) return { error: "Demasiados intentos. Espere 15 minutos." };
+
   const parsed = resetRequestSchema.safeParse({ email });
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
@@ -253,6 +263,9 @@ export async function requestPasswordResetCode(email: string) {
 }
 
 export async function verifyResetCode(email: string, code: string) {
+  const rl = checkRateLimit(`verifyReset:${email?.toLowerCase() || "unknown"}`);
+  if (!rl.allowed) return { error: "Demasiados intentos. Espere 15 minutos." };
+
   if (!code || code.length !== 6) {
     return { error: "Ingrese el codigo de 6 digitos." };
   }
@@ -294,11 +307,10 @@ export async function resetPasswordWithCode(
   password: string,
   confirmPassword: string
 ) {
-  if (password.length < 8) {
-    return { error: "La contrasena debe tener al menos 8 caracteres." };
-  }
-  if (password !== confirmPassword) {
-    return { error: "Las contrasenas no coinciden." };
+  const { resetPasswordSchema } = await import("@/lib/validations/auth");
+  const parsed = resetPasswordSchema.safeParse({ token: code, password, confirmPassword });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
   }
 
   const normalizedEmail = email.toLowerCase();

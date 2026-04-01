@@ -36,11 +36,11 @@ export default async function RRHHPage() {
 
           return (
             <Link key={item.title} href={item.href}>
-              <Card className="h-full hover:shadow-md cursor-pointer transition-shadow">
-                <CardContent className="pt-2">
+              <Card className="h-full hover:shadow-md hover:-translate-y-0.5 cursor-pointer transition-all rounded-2xl">
+                <CardContent className="pt-4">
                   <div className="flex items-start justify-between">
-                    <div className="h-10 w-10 rounded-xl bg-rasma-teal/10 flex items-center justify-center mb-3">
-                      <Icon className="h-5 w-5 text-rasma-teal" />
+                    <div className="h-10 w-10 rounded-xl bg-rasma-dark text-rasma-lime flex items-center justify-center mb-3">
+                      <Icon className="h-5 w-5" />
                     </div>
                     {count !== null && count !== undefined && count > 0 && (
                       <Badge variant="secondary" className="text-xs">{count}</Badge>

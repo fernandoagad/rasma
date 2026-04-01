@@ -214,111 +214,118 @@ export function PatientDetail({ patient, userRole, userId, appointments = [], pa
 
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <AvatarInitials name={fullName} size="lg" />
-          <div>
-            <h1 className="text-2xl font-bold text-rasma-dark">{fullName}</h1>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <StatusBadge type="patient" status={patient.status} />
-              {patient.rut && <span className="text-sm text-muted-foreground">RUT: {patient.rut}</span>}
-              {patient.city && (
-                <span className="text-sm text-muted-foreground flex items-center gap-1">
-                  <MapPin className="h-3 w-3" /> {patient.city}
-                </span>
-              )}
-              {patient.program && <span className="text-sm text-muted-foreground">{patient.program}</span>}
+      {/* ═══ HEADER ═══ */}
+      <div className="rounded-2xl border bg-white p-5 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <AvatarInitials name={fullName} size="lg" />
+            <div>
+              <h1 className="text-2xl font-bold text-rasma-dark tracking-tight">{fullName}</h1>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                <StatusBadge type="patient" status={patient.status} />
+                {patient.rut && <span className="text-xs text-muted-foreground font-mono bg-zinc-100 px-2 py-0.5 rounded">RUT: {patient.rut}</span>}
+                {patient.city && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> {patient.city}
+                  </span>
+                )}
+                {patient.program && <Badge variant="outline" className="text-xs">{patient.program}</Badge>}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Link href={`/pacientes/${patient.id}/editar`}>
-            <Button variant="outline" size="sm">
-              <Pencil className="mr-2 h-4 w-4" /> {UI.common.edit}
-            </Button>
-          </Link>
-          {canDelete && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="mr-2 h-4 w-4" /> {UI.common.delete}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{UI.common.confirm}</DialogTitle>
-                  <DialogDescription>{UI.patients.confirmDelete}</DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button variant="outline">{UI.common.cancel}</Button>
-                  <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-                    {deleting ? UI.common.loading : UI.common.delete}
+          <div className="flex gap-2 shrink-0">
+            <Link href={`/pacientes/${patient.id}/editar`}>
+              <Button variant="outline" size="sm" className="rounded-xl gap-1.5">
+                <Pencil className="h-3.5 w-3.5" /> {UI.common.edit}
+              </Button>
+            </Link>
+            {canDelete && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="rounded-xl gap-1.5 border-red-200 text-rasma-red hover:bg-red-50">
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{UI.common.confirm}</DialogTitle>
+                    <DialogDescription>{UI.patients.confirmDelete}</DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline">{UI.common.cancel}</Button>
+                    <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+                      {deleting ? UI.common.loading : UI.common.delete}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <SummaryCard
             label="Plan activo"
-            value={summary.activePlans > 0 ? `${summary.activePlans}` : "—"}
+            value={summary.activePlans > 0 ? `${summary.activePlans}` : "Sin plan"}
             sub={summary.latestDiagnosis}
-            color={summary.activePlans > 0 ? "text-emerald-600" : "text-muted-foreground"}
-            icon={<ClipboardList className="h-3.5 w-3.5" />}
+            hasData={summary.activePlans > 0}
+            icon={<ClipboardList className="h-4 w-4" />}
+            iconBg="bg-emerald-100 text-emerald-600"
           />
           <SummaryCard
-            label="Próxima cita"
+            label="Proxima cita"
             value={summary.nextAppointment
-              ? new Date(summary.nextAppointment.dateTime).toLocaleDateString("es-CL", { day: "numeric", month: "short" })
-              : "—"}
+              ? new Date(summary.nextAppointment.dateTime).toLocaleDateString("es-CL", { timeZone: "America/Santiago", day: "numeric", month: "short" })
+              : "Sin agendar"}
             sub={summary.nextAppointment?.therapistName}
-            color={summary.nextAppointment ? "text-blue-600" : "text-muted-foreground"}
-            icon={<Calendar className="h-3.5 w-3.5" />}
+            hasData={!!summary.nextAppointment}
+            icon={<Calendar className="h-4 w-4" />}
+            iconBg="bg-rasma-dark/10 text-rasma-dark"
           />
           <SummaryCard
-            label="Última sesión"
+            label="Ultima sesion"
             value={summary.lastSession
-              ? new Date(summary.lastSession.dateTime).toLocaleDateString("es-CL", { day: "numeric", month: "short" })
-              : "—"}
+              ? new Date(summary.lastSession.dateTime).toLocaleDateString("es-CL", { timeZone: "America/Santiago", day: "numeric", month: "short" })
+              : "Sin sesiones"}
             sub={summary.lastSession?.therapistName}
-            color={summary.lastSession ? "text-orange-600" : "text-muted-foreground"}
-            icon={<Clock className="h-3.5 w-3.5" />}
+            hasData={!!summary.lastSession}
+            icon={<Clock className="h-4 w-4" />}
+            iconBg="bg-amber-100 text-amber-600"
           />
           <SummaryCard
-            label="Sesiones"
+            label="Sesiones completadas"
             value={`${summary.completedSessions}`}
-            sub="completadas"
-            color="text-rasma-teal"
-            icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+            hasData={summary.completedSessions > 0}
+            icon={<CheckCircle2 className="h-4 w-4" />}
+            iconBg="bg-rasma-dark text-rasma-lime"
           />
           {canSeeNotes && (
             <SummaryCard
               label="Notas pendientes"
               value={`${summary.pendingNotes}`}
               sub={summary.pendingNotes > 0 ? "sin completar" : undefined}
-              color={summary.pendingNotes > 0 ? "text-amber-600" : "text-muted-foreground"}
-              icon={<FileText className="h-3.5 w-3.5" />}
+              hasData={summary.pendingNotes > 0}
               alert={summary.pendingNotes > 0}
+              icon={<FileText className="h-4 w-4" />}
+              iconBg={summary.pendingNotes > 0 ? "bg-amber-100 text-amber-600" : "bg-zinc-100 text-muted-foreground"}
             />
           )}
           <SummaryCard
             label="Profesionales"
             value={`${summary.teamCount}`}
             sub="asignados"
-            color="text-purple-600"
-            icon={<Users2 className="h-3.5 w-3.5" />}
+            hasData={summary.teamCount > 0}
+            icon={<Users2 className="h-4 w-4" />}
+            iconBg="bg-zinc-100 text-rasma-dark"
           />
         </div>
       )}
 
       {/* Quick-glance patient info bar */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-muted-foreground px-1">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground rounded-2xl border bg-white px-5 py-3">
         {patient.primaryTherapist && (
           <span className="flex items-center gap-1.5">
             <User className="h-3.5 w-3.5" />
@@ -442,11 +449,11 @@ export function PatientDetail({ patient, userRole, userId, appointments = [], pa
         {/* Appointments tab */}
         <TabsContent value="appointments" className="mt-4 space-y-3">
           {/* Therapist filter toggle */}
-          <div className="flex items-center gap-1 rounded-lg border p-0.5 w-fit">
+          <div className="flex items-center gap-0.5 rounded-xl border p-0.5 bg-zinc-50 w-fit">
             <button
               onClick={() => setApptFilter("mine")}
               className={cn(
-                "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all",
                 apptFilter === "mine"
                   ? "bg-rasma-dark text-rasma-lime"
                   : "text-muted-foreground hover:text-foreground"
@@ -457,7 +464,7 @@ export function PatientDetail({ patient, userRole, userId, appointments = [], pa
             <button
               onClick={() => setApptFilter("all")}
               className={cn(
-                "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all",
                 apptFilter === "all"
                   ? "bg-rasma-dark text-rasma-lime"
                   : "text-muted-foreground hover:text-foreground"
@@ -472,7 +479,7 @@ export function PatientDetail({ patient, userRole, userId, appointments = [], pa
               apptFilter === "mine" ? "No tienes citas con este paciente." : "Este paciente no tiene citas registradas."
             } />
           ) : (
-            <Card className="py-0 gap-0 overflow-hidden">
+            <Card className="py-0 gap-0 overflow-hidden rounded-2xl">
               <CardContent className="p-0">
                 <div className="divide-y">
                   {filteredAppointments.map((appt) => {
@@ -491,7 +498,7 @@ export function PatientDetail({ patient, userRole, userId, appointments = [], pa
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium">
-                              {dt.toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+                              {dt.toLocaleDateString("es-CL", { timeZone: "America/Santiago", weekday: "short", day: "numeric", month: "short", year: "numeric" })}
                             </p>
                             {apptFilter === "all" && (
                               <Badge variant={isOwn ? "default" : "secondary"} className="text-[10px] px-1.5">
@@ -500,7 +507,7 @@ export function PatientDetail({ patient, userRole, userId, appointments = [], pa
                             )}
                           </div>
                           <p className="text-[11px] text-muted-foreground">
-                            {dt.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })} · {appt.durationMinutes}min · {appt.therapistName} · {sessionTypeLabels[appt.sessionType] || appt.sessionType}
+                            {dt.toLocaleTimeString("es-CL", { timeZone: "America/Santiago", hour: "2-digit", minute: "2-digit" })} · {appt.durationMinutes}min · {appt.therapistName} · {sessionTypeLabels[appt.sessionType] || appt.sessionType}
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -510,7 +517,7 @@ export function PatientDetail({ patient, userRole, userId, appointments = [], pa
                           {appt.hasNote && (
                             <FileText className="h-3.5 w-3.5 text-emerald-500" />
                           )}
-                          {appt.modality === "online" ? <Video className="h-3.5 w-3.5 text-rasma-teal" /> : <MapPinIcon className="h-3.5 w-3.5 text-muted-foreground" />}
+                          {appt.modality === "online" ? <Video className="h-3.5 w-3.5 text-muted-foreground" /> : <MapPinIcon className="h-3.5 w-3.5 text-muted-foreground" />}
                           <StatusBadge type="appointment" status={appt.status} />
                         </div>
                       </Link>
@@ -527,7 +534,7 @@ export function PatientDetail({ patient, userRole, userId, appointments = [], pa
           {payments.length === 0 ? (
             <EmptyState icon={CreditCard} title="Sin pagos" description="Este paciente no tiene pagos registrados." />
           ) : (
-            <Card className="py-0 gap-0 overflow-hidden">
+            <Card className="py-0 gap-0 overflow-hidden rounded-2xl">
               <CardContent className="p-0">
                 <div className="divide-y">
                   {payments.map((p) => (
@@ -556,11 +563,11 @@ export function PatientDetail({ patient, userRole, userId, appointments = [], pa
           <TabsContent value="notes" className="mt-4 space-y-3">
             <div className="flex items-center justify-between">
               {/* Therapist filter toggle */}
-              <div className="flex items-center gap-1 rounded-lg border p-0.5">
+              <div className="flex items-center gap-0.5 rounded-xl border p-0.5 bg-zinc-50">
                 <button
                   onClick={() => setNoteFilter("mine")}
                   className={cn(
-                    "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                    "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all",
                     noteFilter === "mine"
                       ? "bg-rasma-dark text-rasma-lime"
                       : "text-muted-foreground hover:text-foreground"
@@ -571,7 +578,7 @@ export function PatientDetail({ patient, userRole, userId, appointments = [], pa
                 <button
                   onClick={() => setNoteFilter("all")}
                   className={cn(
-                    "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                    "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all",
                     noteFilter === "all"
                       ? "bg-rasma-dark text-rasma-lime"
                       : "text-muted-foreground hover:text-foreground"
@@ -591,7 +598,7 @@ export function PatientDetail({ patient, userRole, userId, appointments = [], pa
                 noteFilter === "mine" ? "No tienes notas para este paciente." : "Este paciente no tiene notas clínicas."
               } />
             ) : (
-              <Card className="py-0 gap-0 overflow-hidden">
+              <Card className="py-0 gap-0 overflow-hidden rounded-2xl">
                 <CardContent className="p-0">
                   <div className="divide-y">
                     {filteredNotes.map((note) => {
@@ -653,7 +660,7 @@ export function PatientDetail({ patient, userRole, userId, appointments = [], pa
                   const therapistDisplay = plan.therapist?.name || plan.therapistName || "—";
 
                   return (
-                    <Card key={plan.id} className="py-0 gap-0 overflow-hidden hover:shadow-md transition-shadow">
+                    <Card key={plan.id} className="py-0 gap-0 overflow-hidden rounded-2xl hover:shadow-md transition-all hover:-translate-y-0.5">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
@@ -727,28 +734,37 @@ function SummaryCard({
   label,
   value,
   sub,
-  color,
   icon,
+  iconBg,
+  hasData,
   alert,
 }: {
   label: string;
   value: string;
   sub?: string | null;
-  color: string;
   icon: React.ReactNode;
+  iconBg: string;
+  hasData: boolean;
   alert?: boolean;
 }) {
   return (
     <div className={cn(
-      "rounded-xl border px-3 py-2.5",
-      alert ? "border-amber-200 bg-amber-50/40" : "bg-background"
+      "rounded-2xl border p-4 transition-colors",
+      alert ? "border-amber-300 bg-amber-50/50" : "bg-white"
     )}>
-      <div className="flex items-center gap-1.5 mb-1">
-        <span className={color}>{icon}</span>
-        <p className="text-[10px] text-muted-foreground leading-none">{label}</p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-muted-foreground font-medium leading-none">{label}</p>
+        <div className={cn("h-8 w-8 rounded-xl flex items-center justify-center shrink-0", iconBg)}>
+          {icon}
+        </div>
       </div>
-      <p className={cn("text-lg font-bold leading-none", color)}>{value}</p>
-      {sub && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</p>}
+      <p className={cn(
+        "text-2xl font-extrabold leading-none tracking-tight",
+        hasData ? "text-rasma-dark" : "text-muted-foreground/40"
+      )}>
+        {value}
+      </p>
+      {sub && <p className="text-[11px] text-muted-foreground mt-1.5 truncate">{sub}</p>}
     </div>
   );
 }
@@ -805,7 +821,7 @@ function CareTeamTab({ patientId, userRole }: { patientId: string; userRole: str
           description="Asigne profesionales al equipo de atención de este paciente."
         />
       ) : (
-        <Card className="py-0 gap-0 overflow-hidden">
+        <Card className="py-0 gap-0 overflow-hidden rounded-2xl">
           <CardContent className="p-0">
             <div className="divide-y">
               {members.map((member) => (

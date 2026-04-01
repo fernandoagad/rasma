@@ -72,8 +72,8 @@ export default async function IngresosPage({
       value: `$${stats.totalAllTime.toLocaleString("es-CL")}`,
       sub: `${stats.countAllTime} ingresos`,
       icon: DollarSign,
-      color: "text-rasma-teal",
-      bg: "bg-rasma-teal/10",
+      color: "text-rasma-dark",
+      bg: "bg-zinc-100",
     },
   ];
 
@@ -84,8 +84,8 @@ export default async function IngresosPage({
         subtitle={`${total} registros`}
         action={
           <Link href="/ingresos/nuevo">
-            <Button>
-              <TrendingUp className="mr-2 h-4 w-4" /> Nuevo Ingreso
+            <Button className="h-11 px-5 text-base font-semibold rounded-xl gap-2 bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90">
+              <TrendingUp className="h-5 w-5" /> Nuevo Ingreso
             </Button>
           </Link>
         }
@@ -93,14 +93,14 @@ export default async function IngresosPage({
 
       <div className="grid gap-4 sm:grid-cols-2">
         {statCards.map((stat) => (
-          <Card key={stat.title}>
-            <CardContent className="pt-2">
+          <Card key={stat.title} className="rounded-2xl">
+            <CardContent className="pt-4 pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground font-medium">{stat.title}</p>
+                  <p className="text-2xl font-extrabold text-rasma-dark mt-1 tabular-nums">{stat.value}</p>
                   {stat.sub && (
-                    <p className="text-xs text-muted-foreground">{stat.sub}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{stat.sub}</p>
                   )}
                 </div>
                 <div
@@ -129,25 +129,28 @@ export default async function IngresosPage({
       <IncomeTable income={income} />
 
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+        <div className="flex justify-center gap-1 pt-4">
+          {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+            let pageNum: number;
+            if (totalPages <= 7) pageNum = i + 1;
+            else if (currentPage <= 4) pageNum = i + 1;
+            else if (currentPage >= totalPages - 3) pageNum = totalPages - 6 + i;
+            else pageNum = currentPage - 3 + i;
             const urlParams = new URLSearchParams();
             if (params.category) urlParams.set("category", params.category);
             if (params.dateFrom) urlParams.set("dateFrom", params.dateFrom);
             if (params.dateTo) urlParams.set("dateTo", params.dateTo);
             if (params.search) urlParams.set("search", params.search);
-            urlParams.set("page", String(p));
+            urlParams.set("page", String(pageNum));
             return (
               <Link
-                key={p}
+                key={pageNum}
                 href={`/ingresos?${urlParams.toString()}`}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  p === currentPage
-                    ? "bg-rasma-dark text-rasma-lime"
-                    : "bg-muted hover:bg-muted/80"
+                className={`h-9 w-9 flex items-center justify-center rounded-xl text-sm font-medium transition-colors ${
+                  pageNum === currentPage ? "bg-rasma-dark text-rasma-lime" : "text-muted-foreground hover:bg-zinc-100"
                 }`}
               >
-                {p}
+                {pageNum}
               </Link>
             );
           })}

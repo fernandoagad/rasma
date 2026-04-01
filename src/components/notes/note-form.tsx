@@ -122,10 +122,10 @@ export function NoteForm({ appointments, preselectedId }: Props) {
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     {new Date(selectedAppt.dateTime).toLocaleDateString("es-CL", {
-                      weekday: "long", day: "numeric", month: "long"
+                      timeZone: "America/Santiago", weekday: "long", day: "numeric", month: "long"
                     })}
                     {" \u2014 "}
-                    {new Date(selectedAppt.dateTime).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
+                    {new Date(selectedAppt.dateTime).toLocaleTimeString("es-CL", { timeZone: "America/Santiago", hour: "2-digit", minute: "2-digit" })}
                   </p>
                 </div>
               </div>
@@ -167,9 +167,9 @@ export function NoteForm({ appointments, preselectedId }: Props) {
                         <div>
                           <p className="text-sm font-medium">{a.patient.firstName} {a.patient.lastName}</p>
                           <p className="text-xs text-muted-foreground">
-                            {new Date(a.dateTime).toLocaleDateString("es-CL", { day: "numeric", month: "short" })}
+                            {new Date(a.dateTime).toLocaleDateString("es-CL", { timeZone: "America/Santiago", day: "numeric", month: "short" })}
                             {" \u2014 "}
-                            {new Date(a.dateTime).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
+                            {new Date(a.dateTime).toLocaleTimeString("es-CL", { timeZone: "America/Santiago", hour: "2-digit", minute: "2-digit" })}
                           </p>
                         </div>
                       </button>

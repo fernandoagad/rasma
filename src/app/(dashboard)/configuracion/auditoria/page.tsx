@@ -76,7 +76,7 @@ export default async function AuditoriaPage({
         subtitle={`${totalCount} registros`}
       />
 
-      <div className="rounded-xl border bg-card">
+      <div className="rounded-2xl border bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -98,7 +98,7 @@ export default async function AuditoriaPage({
               logs.map((log) => (
                 <TableRow key={log.id}>
                   <TableCell className="pl-4 text-xs whitespace-nowrap">
-                    {log.createdAt ? new Date(log.createdAt).toLocaleString("es-CL") : "—"}
+                    {log.createdAt ? new Date(log.createdAt).toLocaleString("es-CL", { timeZone: "America/Santiago" }) : "—"}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -126,15 +126,22 @@ export default async function AuditoriaPage({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => i + 1).map((p) => (
-            <Link key={p} href={`/configuracion/auditoria?page=${p}`}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                p === page ? "bg-rasma-dark text-rasma-lime" : "bg-muted hover:bg-muted/80"
-              }`}>
-              {p}
-            </Link>
-          ))}
+        <div className="flex justify-center gap-1 pt-4">
+          {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+            let pageNum: number;
+            if (totalPages <= 7) pageNum = i + 1;
+            else if (page <= 4) pageNum = i + 1;
+            else if (page >= totalPages - 3) pageNum = totalPages - 6 + i;
+            else pageNum = page - 3 + i;
+            return (
+              <Link key={pageNum} href={`/configuracion/auditoria?page=${pageNum}`}
+                className={`h-9 w-9 flex items-center justify-center rounded-xl text-sm font-medium transition-colors ${
+                  pageNum === page ? "bg-rasma-dark text-rasma-lime" : "text-muted-foreground hover:bg-zinc-100"
+                }`}>
+                {pageNum}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

@@ -25,13 +25,13 @@ interface NextAppointmentProps {
 }
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("es-CL", { timeZone: "America/Santiago", hour: "2-digit", minute: "2-digit" });
 }
 
 function getEndTime(iso: string, duration: number): string {
   const d = new Date(iso);
   d.setMinutes(d.getMinutes() + duration);
-  return d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString("es-CL", { timeZone: "America/Santiago", hour: "2-digit", minute: "2-digit" });
 }
 
 function useCountdown(targetIso: string) {
@@ -75,22 +75,23 @@ export function NextAppointment({ appointment, userRole }: NextAppointmentProps)
   const isOnline = appointment.modality === "online";
 
   return (
-    <div className={`rounded-lg p-5 sm:p-6 ${
+    <div className={`rounded-2xl p-5 sm:p-6 relative overflow-hidden ${
       isNow
-        ? "bg-white border border-rasma-dark/40 border-l-[3px] border-l-rasma-dark"
+        ? "bg-white border-2 border-rasma-dark/30"
         : "bg-white border border-border"
     }`}>
+      {isNow && <div className="absolute left-0 top-0 bottom-0 w-1 bg-rasma-dark" />}
       {/* Top: countdown badge */}
       <div className="flex items-center justify-between mb-4">
-        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-md text-sm font-bold ${
+        <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-sm font-bold ${
           isNow
-            ? "bg-rasma-dark text-white"
+            ? "bg-rasma-dark text-rasma-lime"
             : "bg-rasma-dark/10 text-rasma-dark"
         }`}>
           {isNow && (
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rasma-lime opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-rasma-lime" />
             </span>
           )}
           <Clock className="h-4 w-4" />
@@ -129,7 +130,7 @@ export function NextAppointment({ appointment, userRole }: NextAppointmentProps)
       <div className="flex items-center gap-3">
         {isOnline && appointment.meetingLink ? (
           <Button
-            className="bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90 gap-2 h-10 px-5 text-sm rounded-lg flex-1 sm:flex-none font-semibold"
+            className="bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90 gap-2 h-10 px-5 text-sm rounded-xl flex-1 sm:flex-none font-semibold"
             asChild
           >
             <a href={appointment.meetingLink} target="_blank" rel="noopener noreferrer">

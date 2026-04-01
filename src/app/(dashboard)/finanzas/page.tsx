@@ -86,8 +86,8 @@ export default async function FinanzasPage({
       title: "Posición de Caja",
       value: fmt(data.cashPosition),
       icon: Landmark,
-      color: data.cashPosition >= 0 ? "text-rasma-teal" : "text-red-600",
-      bg: data.cashPosition >= 0 ? "bg-rasma-teal/10" : "bg-red-50",
+      color: data.cashPosition >= 0 ? "text-rasma-dark" : "text-red-600",
+      bg: data.cashPosition >= 0 ? "bg-rasma-lime/30" : "bg-red-50",
       delta: <span className="text-xs text-muted-foreground">balance acumulado</span>,
     },
   ];
@@ -128,13 +128,13 @@ export default async function FinanzasPage({
         action={
           <div className="flex items-center gap-2">
             <Link href="/ingresos/nuevo">
-              <Button variant="outline" size="sm">
-                <TrendingUp className="h-4 w-4 mr-2" /> Nuevo Ingreso
+              <Button variant="outline" size="sm" className="rounded-xl gap-1.5">
+                <TrendingUp className="h-4 w-4" /> Nuevo Ingreso
               </Button>
             </Link>
             <Link href="/gastos/nuevo">
-              <Button variant="outline" size="sm">
-                <Wallet className="h-4 w-4 mr-2" /> Nuevo Gasto
+              <Button variant="outline" size="sm" className="rounded-xl gap-1.5">
+                <Wallet className="h-4 w-4" /> Nuevo Gasto
               </Button>
             </Link>
           </div>
@@ -149,16 +149,16 @@ export default async function FinanzasPage({
       {/* 4 Key Stat Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <Card key={stat.title}>
-            <CardContent className="pt-2">
+          <Card key={stat.title} className="rounded-2xl">
+            <CardContent className="pt-4 pb-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">{stat.title}</p>
-                  <p className="text-xl font-bold mt-1">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground font-medium">{stat.title}</p>
+                  <p className="text-xl font-extrabold text-rasma-dark mt-1 tabular-nums">{stat.value}</p>
                   <div className="mt-1">{stat.delta}</div>
                 </div>
-                <div className={`h-9 w-9 rounded-xl ${stat.bg} flex items-center justify-center shrink-0`}>
-                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                <div className={`h-10 w-10 rounded-xl ${stat.bg} flex items-center justify-center shrink-0`}>
+                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
                 </div>
               </div>
             </CardContent>

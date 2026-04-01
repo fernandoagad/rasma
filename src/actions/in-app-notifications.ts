@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import { requireStaff } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { inAppNotifications } from "@/lib/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -74,6 +75,8 @@ export async function createInAppNotification(
     entityId?: string;
   }
 ) {
+  await requireStaff();
+
   await db.insert(inAppNotifications).values({
     userId,
     ...data,

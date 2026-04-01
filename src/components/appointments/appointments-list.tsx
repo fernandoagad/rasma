@@ -16,6 +16,8 @@ import {
   CreditCard,
   Eye,
   User,
+  Repeat,
+  Pencil,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { updateAppointmentStatus } from "@/actions/appointments";
 import { cn } from "@/lib/utils";
+import { formatChileTime, formatChileDate, CHILE_TZ, isSameDayChile } from "@/lib/timezone";
 
 interface Appointment {
   id: string;
@@ -41,6 +44,7 @@ interface Appointment {
   meetingLink: string | null;
   location: string | null;
   notes: string | null;
+  recurringGroupId: string | null;
   patient: { id: string; firstName: string; lastName: string };
   therapist: { id: string; name: string };
 }
@@ -56,7 +60,7 @@ function groupByDate(appointments: Appointment[]): Map<string, Appointment[]> {
   const groups = new Map<string, Appointment[]>();
   for (const appt of appointments) {
     const dt = new Date(appt.dateTime);
-    const key = dt.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    const key = formatChileDate(dt, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(appt);
   }
@@ -64,22 +68,12 @@ function groupByDate(appointments: Appointment[]): Map<string, Appointment[]> {
 }
 
 function isToday(date: Date): boolean {
-  const now = new Date();
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
+  return isSameDayChile(date, new Date());
 }
 
 function isTomorrow(date: Date): boolean {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return (
-    date.getFullYear() === tomorrow.getFullYear() &&
-    date.getMonth() === tomorrow.getMonth() &&
-    date.getDate() === tomorrow.getDate()
-  );
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  return isSameDayChile(date, tomorrow);
 }
 
 function getRelativeLabel(date: Date): string | null {
@@ -137,25 +131,19 @@ export function AppointmentsList({ appointments, totalPages, currentPage, filter
 
                 return (
                   <Card key={appt.id} className={cn(
-                    "py-0 gap-0 transition-all hover:shadow-md overflow-hidden",
+                    "py-0 gap-0 transition-all hover:shadow-md overflow-hidden rounded-2xl",
                     isLoading && "opacity-60 pointer-events-none",
-                    appt.status === "cancelada" && "opacity-60"
+                    appt.status === "cancelada" && "opacity-50"
                   )}>
                     <CardContent className="p-0">
                       <div className="flex items-stretch">
                         {/* Left time strip */}
-                        <div className={cn(
-                          "flex flex-col items-center justify-center w-[100px] shrink-0 border-r py-3",
-                          appt.status === "completada" && "bg-zinc-50",
-                          appt.status === "programada" && "bg-zinc-50",
-                          appt.status === "cancelada" && "bg-zinc-50",
-                          appt.status === "no_asistio" && "bg-zinc-50",
-                        )}>
+                        <div className="flex flex-col items-center justify-center w-[100px] shrink-0 border-r py-3 bg-zinc-50">
                           <p className="text-base font-bold text-rasma-dark leading-none">
-                            {dt.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                            {formatChileTime(dt)}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {endTime.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                            {formatChileTime(endTime)}
                           </p>
                           <p className="text-xs text-muted-foreground mt-0.5 font-medium">
                             {appt.durationMinutes} min
@@ -178,6 +166,15 @@ export function AppointmentsList({ appointments, totalPages, currentPage, filter
                                 <span className="text-xs text-muted-foreground capitalize">{appt.sessionType}</span>
                                 <span className="text-muted-foreground">·</span>
                                 <span className="text-xs text-muted-foreground">{appt.therapist.name}</span>
+                                {appt.recurringGroupId && (
+                                  <>
+                                    <span className="text-muted-foreground">·</span>
+                                    <span className="inline-flex items-center gap-1 text-xs text-rasma-dark/60 font-medium">
+                                      <Repeat className="h-3 w-3" />
+                                      Recurrente
+                                    </span>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -189,7 +186,7 @@ export function AppointmentsList({ appointments, totalPages, currentPage, filter
                                 href={appt.meetingLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rasma-dark text-rasma-lime text-xs font-semibold hover:bg-rasma-dark/90 transition-colors"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rasma-dark text-rasma-lime text-xs font-semibold hover:bg-rasma-dark/90 transition-colors"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <Video className="h-3.5 w-3.5" />
@@ -197,12 +194,12 @@ export function AppointmentsList({ appointments, totalPages, currentPage, filter
                                 <ExternalLink className="h-3 w-3" />
                               </a>
                             ) : appt.modality === "online" ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-xs text-muted-foreground">
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-muted text-xs text-muted-foreground">
                                 <Video className="h-3.5 w-3.5" />
                                 <span className="hidden sm:inline">Online</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-xs text-muted-foreground">
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-muted text-xs text-muted-foreground">
                                 <MapPin className="h-3.5 w-3.5" />
                                 <span className="hidden sm:inline">Presencial</span>
                               </span>
@@ -223,6 +220,13 @@ export function AppointmentsList({ appointments, totalPages, currentPage, filter
                                     <Eye className="mr-2 h-4 w-4" /> Ver detalle
                                   </Link>
                                 </DropdownMenuItem>
+                                {isProgramada && (
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/citas/${appt.id}/editar`} className="cursor-pointer">
+                                      <Pencil className="mr-2 h-4 w-4" /> Editar cita
+                                    </Link>
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem asChild>
                                   <Link href={`/pacientes/${appt.patient.id}`} className="cursor-pointer">
                                     <User className="mr-2 h-4 w-4" /> Ver paciente
@@ -292,21 +296,33 @@ export function AppointmentsList({ appointments, totalPages, currentPage, filter
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2 pt-4">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <Link
-              key={p}
-              href={`/citas?status=${filterStatus || "all"}&page=${p}`}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-sm font-medium transition",
-                p === currentPage
-                  ? "bg-rasma-dark text-rasma-lime"
-                  : "bg-muted hover:bg-muted/80"
-              )}
-            >
-              {p}
-            </Link>
-          ))}
+        <div className="flex justify-center gap-1 pt-6">
+          {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+            let pageNum: number;
+            if (totalPages <= 7) {
+              pageNum = i + 1;
+            } else if (currentPage <= 4) {
+              pageNum = i + 1;
+            } else if (currentPage >= totalPages - 3) {
+              pageNum = totalPages - 6 + i;
+            } else {
+              pageNum = currentPage - 3 + i;
+            }
+            return (
+              <Link
+                key={pageNum}
+                href={`/citas?status=${filterStatus || "all"}&page=${pageNum}`}
+                className={cn(
+                  "h-9 w-9 flex items-center justify-center rounded-xl text-sm font-medium transition-colors",
+                  pageNum === currentPage
+                    ? "bg-rasma-dark text-rasma-lime"
+                    : "text-muted-foreground hover:bg-zinc-100"
+                )}
+              >
+                {pageNum}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

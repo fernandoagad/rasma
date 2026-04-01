@@ -2,7 +2,7 @@ import { getPayments, getPaymentStats } from "@/actions/payments";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { CreditCard, DollarSign, Clock, CheckCircle, ExternalLink, Copy } from "lucide-react";
+import { CreditCard, DollarSign, Clock, CheckCircle, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -12,14 +12,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Button } from "@/components/ui/button";
 import { PaymentActions } from "@/components/payments/payment-actions";
 import { CopyCheckoutUrl } from "@/components/payments/copy-checkout-url";
-import { Badge } from "@/components/ui/badge";
 import { Suspense } from "react";
 
 const methodLabels: Record<string, string> = {
@@ -48,7 +46,7 @@ const paymentFilters = [
     options: [
       { value: "all", label: "Todos" },
       { value: "paciente", label: "Paciente" },
-      { value: "fundacion", label: "Fundación" },
+      { value: "fundacion", label: "Fundacion" },
     ],
   },
 ];
@@ -71,81 +69,59 @@ export default async function PagosPage({
   ]);
 
   const statCards = [
-    {
-      title: "Cobrado",
-      value: `$${stats.paidAmount.toLocaleString("es-CL")}`,
-      sub: `${stats.paidCount} pagos`,
-      icon: CheckCircle,
-      color: "text-rasma-green",
-      bg: "bg-rasma-green/10",
-    },
-    {
-      title: "Pendiente",
-      value: `$${stats.pendingAmount.toLocaleString("es-CL")}`,
-      sub: `${stats.pendingCount} pagos`,
-      icon: Clock,
-      color: "text-yellow-600",
-      bg: "bg-yellow-50",
-    },
-    {
-      title: "Fundación",
-      value: `$${stats.foundationPaidAmount.toLocaleString("es-CL")}`,
-      sub: `${stats.foundationPaidCount} pagos`,
-      icon: CreditCard,
-      color: "text-rasma-teal",
-      bg: "bg-rasma-teal/10",
-    },
-    {
-      title: "Total",
-      value: `$${(stats.paidAmount + stats.pendingAmount).toLocaleString("es-CL")}`,
-      sub: "",
-      icon: DollarSign,
-      color: "text-rasma-teal",
-      bg: "bg-rasma-teal/10",
-    },
+    { title: "Cobrado", value: `$${stats.paidAmount.toLocaleString("es-CL")}`, sub: `${stats.paidCount} pagos`, icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-100" },
+    { title: "Pendiente", value: `$${stats.pendingAmount.toLocaleString("es-CL")}`, sub: `${stats.pendingCount} pagos`, icon: Clock, color: "text-amber-600", bg: "bg-amber-100" },
+    { title: "Fundacion", value: `$${stats.foundationPaidAmount.toLocaleString("es-CL")}`, sub: `${stats.foundationPaidCount} pagos`, icon: CreditCard, color: "text-rasma-dark", bg: "bg-zinc-100" },
+    { title: "Total", value: `$${(stats.paidAmount + stats.pendingAmount).toLocaleString("es-CL")}`, sub: "", icon: DollarSign, color: "text-rasma-dark", bg: "bg-rasma-lime/30" },
   ];
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <PageHeader
-        title="Pagos"
-        subtitle={`${total} registros`}
-        action={
-          <Link href="/pagos/nuevo">
-            <Button>
-              <CreditCard className="mr-2 h-4 w-4" /> Nuevo Pago
-            </Button>
-          </Link>
-        }
-      />
+      {/* ═══ HEADER ═══ */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-rasma-dark text-rasma-lime flex items-center justify-center">
+            <CreditCard className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-rasma-dark tracking-tight">Pagos</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">{total} registros</p>
+          </div>
+        </div>
+        <Link href="/pagos/nuevo">
+          <Button className="h-11 px-5 text-base font-semibold rounded-xl gap-2 bg-rasma-dark text-rasma-lime hover:bg-rasma-dark/90">
+            <Plus className="h-5 w-5" /> Nuevo Pago
+          </Button>
+        </Link>
+      </div>
 
-      {/* MP return status banner */}
+      {/* MP return banners */}
       {params.mp_status === "success" && (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-          Pago completado exitosamente a través de MercadoPago.
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 font-medium">
+          Pago completado exitosamente a traves de MercadoPago.
         </div>
       )}
       {params.mp_status === "failure" && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 font-medium">
           El pago no pudo ser procesado. Intente nuevamente.
         </div>
       )}
       {params.mp_status === "pending" && (
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-          El pago está siendo procesado por MercadoPago.
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 font-medium">
+          El pago esta siendo procesado por MercadoPago.
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ═══ STATS ═══ */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <Card key={stat.title}>
-            <CardContent className="pt-2">
+          <Card key={stat.title} className="rounded-2xl">
+            <CardContent className="pt-4 pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="text-2xl font-bold mt-1">{stat.value}</p>
-                  {stat.sub && <p className="text-xs text-muted-foreground">{stat.sub}</p>}
+                  <p className="text-xs text-muted-foreground font-medium">{stat.title}</p>
+                  <p className="text-2xl font-extrabold text-rasma-dark mt-1 tabular-nums">{stat.value}</p>
+                  {stat.sub && <p className="text-xs text-muted-foreground mt-0.5">{stat.sub}</p>}
                 </div>
                 <div className={`h-10 w-10 rounded-xl ${stat.bg} flex items-center justify-center`}>
                   <stat.icon className={`h-5 w-5 ${stat.color}`} />
@@ -156,19 +132,20 @@ export default async function PagosPage({
         ))}
       </div>
 
+      {/* ═══ FILTERS ═══ */}
       <Suspense>
         <FilterBar filters={paymentFilters} basePath="/pagos" />
       </Suspense>
 
-      {/* Table */}
-      <div className="rounded-xl border bg-card">
+      {/* ═══ TABLE ═══ */}
+      <div className="rounded-2xl border bg-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="pl-4">Paciente</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Monto</TableHead>
-              <TableHead className="hidden md:table-cell">Método</TableHead>
+              <TableHead className="hidden md:table-cell">Metodo</TableHead>
               <TableHead className="hidden md:table-cell">Fuente</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="w-10" />
@@ -177,7 +154,7 @@ export default async function PagosPage({
           <TableBody>
             {payments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                   No hay pagos registrados.
                 </TableCell>
               </TableRow>
@@ -193,15 +170,15 @@ export default async function PagosPage({
                         <span className="font-medium text-sm">{patientName}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {new Date(p.date + "T12:00:00").toLocaleDateString("es-CL")}
+                    <TableCell className="text-sm tabular-nums">
+                      {new Date(p.date + "T12:00:00").toLocaleDateString("es-CL", { timeZone: "America/Santiago" })}
                     </TableCell>
-                    <TableCell className="text-sm font-medium">
+                    <TableCell className="text-sm font-semibold tabular-nums">
                       ${(p.amount / 100).toLocaleString("es-CL")}
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm">
                       <div className="flex items-center gap-1.5">
-                        {p.paymentMethod ? methodLabels[p.paymentMethod] || p.paymentMethod : "—"}
+                        {p.paymentMethod ? methodLabels[p.paymentMethod] || p.paymentMethod : "\u2014"}
                         {isMp && p.status === "pendiente" && p.checkoutUrl && (
                           <CopyCheckoutUrl url={p.checkoutUrl} />
                         )}
@@ -224,16 +201,27 @@ export default async function PagosPage({
         </Table>
       </div>
 
+      {/* ═══ PAGINATION ═══ */}
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <Link key={p} href={`/pagos?status=${params.status || "all"}&fundingSource=${params.fundingSource || "all"}&page=${p}`}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                p === currentPage ? "bg-rasma-dark text-rasma-lime" : "bg-muted hover:bg-muted/80"
-              }`}>
-              {p}
-            </Link>
-          ))}
+        <div className="flex justify-center gap-1 pt-4">
+          {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+            let pageNum: number;
+            if (totalPages <= 7) pageNum = i + 1;
+            else if (currentPage <= 4) pageNum = i + 1;
+            else if (currentPage >= totalPages - 3) pageNum = totalPages - 6 + i;
+            else pageNum = currentPage - 3 + i;
+            return (
+              <Link
+                key={pageNum}
+                href={`/pagos?status=${params.status || "all"}&fundingSource=${params.fundingSource || "all"}&page=${pageNum}`}
+                className={`h-9 w-9 flex items-center justify-center rounded-xl text-sm font-medium transition-colors ${
+                  pageNum === currentPage ? "bg-rasma-dark text-rasma-lime" : "text-muted-foreground hover:bg-zinc-100"
+                }`}
+              >
+                {pageNum}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

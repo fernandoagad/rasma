@@ -323,6 +323,44 @@ export function Sidebar({ role, user }: SidebarProps) {
       </header>
 
       {/* ════════════════════════════════════════════ */}
+      {/* MOBILE BOTTOM NAV BAR                        */}
+      {/* ════════════════════════════════════════════ */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-border/60 safe-area-bottom">
+        <div className="flex items-stretch h-16">
+          {getMobileBottomTabs(role).map((tab) => {
+            const active = isNavActive(pathname, tab.href);
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors relative",
+                  active
+                    ? "text-rasma-dark"
+                    : "text-muted-foreground"
+                )}
+              >
+                {active && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full bg-rasma-dark" />
+                )}
+                <tab.icon className={cn("h-5 w-5", active && "text-rasma-dark")} />
+                {tab.label}
+              </Link>
+            );
+          })}
+          <button
+            onClick={() => setMobileOpen(true)}
+            className={cn(
+              "flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold text-muted-foreground transition-colors",
+            )}
+          >
+            <Menu className="h-5 w-5" />
+            Mas
+          </button>
+        </div>
+      </nav>
+
+      {/* ════════════════════════════════════════════ */}
       {/* DIALOGS                                     */}
       {/* ════════════════════════════════════════════ */}
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
@@ -331,4 +369,23 @@ export function Sidebar({ role, user }: SidebarProps) {
       )}
     </>
   );
+}
+
+/* ─── Mobile bottom tab config ─── */
+
+function getMobileBottomTabs(role: string) {
+  if (role === "paciente") {
+    return [
+      { href: "/mis-citas", label: "Citas", icon: Calendar },
+    ];
+  }
+
+  const tabs = [
+    { href: "/", label: "Panel", icon: LayoutDashboard },
+    { href: "/citas", label: "Citas", icon: Calendar },
+    { href: "/calendario", label: "Agenda", icon: CalendarDays },
+    { href: "/pacientes", label: "Pacientes", icon: Users },
+  ];
+
+  return tabs;
 }

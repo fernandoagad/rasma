@@ -218,6 +218,9 @@ export async function updatePaymentStatus(id: string, status: string) {
   const session = await requireStaff();
   if (session.user.role === "terapeuta") return { error: "No autorizado." };
 
+  const validStatuses = ["pendiente", "pagado", "parcial", "cancelado"];
+  if (!validStatuses.includes(status)) return { error: "Estado invalido." };
+
   await db.update(payments).set({
     status: status as "pendiente" | "pagado" | "parcial" | "cancelado",
   }).where(eq(payments.id, id));

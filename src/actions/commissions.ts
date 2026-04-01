@@ -1,6 +1,6 @@
 "use server";
 
-import { requireRole } from "@/lib/authorization";
+import { requireRole, requireStaff } from "@/lib/authorization";
 import { db } from "@/lib/db";
 import { systemSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -22,6 +22,8 @@ export type CommissionRates = {
 };
 
 export async function getCommissionRates(): Promise<CommissionRates> {
+  await requireStaff();
+
   const rows = await db
     .select()
     .from(systemSettings)
