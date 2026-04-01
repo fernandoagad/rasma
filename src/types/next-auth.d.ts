@@ -10,6 +10,9 @@ declare module "next-auth" {
       id: string;
       role: string;
       linkedPatientId: string | null;
+      isImpersonating?: boolean;
+      realRole?: string;
+      impersonatingUserId?: string | null;
     } & DefaultSession["user"];
   }
 }
@@ -19,5 +22,9 @@ declare module "next-auth/jwt" {
     role?: string;
     id?: string;
     linkedPatientId?: string | null;
+    impersonateRole?: string | null;
+    impersonateUserId?: string | null;
+    impersonateLinkedPatientId?: string | null;
+    realRole?: string;
   }
 }

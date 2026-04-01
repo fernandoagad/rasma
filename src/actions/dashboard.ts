@@ -5,15 +5,37 @@ import { db } from "@/lib/db";
 import { patients, appointments, payments, sessionNotes, auditLog, users } from "@/lib/db/schema";
 import { eq, and, sql, gte, lte, isNull, desc, or } from "drizzle-orm";
 
+/**
+ * Fetch ALL dashboard data in a single auth check.
+ * Reduces 4 separate auth() calls to 1.
+ */
+export async function getDashboardBundle(activityLimit = 8, upcomingLimit = 5) {
+  const session = await requireStaff();
+  const role = session.user.role;
+  const userId = session.user.id;
+
+  const [stats, activities, upcoming, todayAppts] = await Promise.all([
+    _getDashboardStats(role, userId),
+    _getRecentActivity(role, userId, activityLimit),
+    _getUpcomingAppointments(role, userId, upcomingLimit),
+    _getTodayAppointments(role, userId),
+  ]);
+
+  return { stats, activities, upcoming, todayAppts };
+}
+
 export async function getDashboardStats() {
   const session = await requireStaff();
+  return _getDashboardStats(session.user.role, session.user.id);
+}
 
+async function _getDashboardStats(role: string, userId: string) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const isTherapist = session.user.role === "terapeuta";
+  const isTherapist = role === "terapeuta";
 
   // Build therapist-scoped conditions
   const todayApptConditions = [
@@ -21,16 +43,16 @@ export async function getDashboardStats() {
     lte(appointments.dateTime, tomorrow),
     eq(appointments.status, "programada"),
   ];
-  if (isTherapist) todayApptConditions.push(eq(appointments.therapistId, session.user.id));
+  if (isTherapist) todayApptConditions.push(eq(appointments.therapistId, userId));
 
   const pendingNotesConditions = [
     eq(appointments.status, "completada"),
     isNull(sessionNotes.id),
   ];
-  if (isTherapist) pendingNotesConditions.push(eq(appointments.therapistId, session.user.id));
+  if (isTherapist) pendingNotesConditions.push(eq(appointments.therapistId, userId));
 
   const weekStart = new Date(today);
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Monday
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 7);
 
@@ -38,7 +60,7 @@ export async function getDashboardStats() {
     gte(appointments.dateTime, weekStart),
     lte(appointments.dateTime, weekEnd),
   ];
-  if (isTherapist) weekApptConditions.push(eq(appointments.therapistId, session.user.id));
+  if (isTherapist) weekApptConditions.push(eq(appointments.therapistId, userId));
 
   const [
     patientCountResult,
@@ -52,11 +74,11 @@ export async function getDashboardStats() {
       ? db.select({ count: sql<number>`count(distinct ${patients.id})` })
           .from(appointments)
           .innerJoin(patients, eq(appointments.patientId, patients.id))
-          .where(and(eq(appointments.therapistId, session.user.id), isNull(patients.deletedAt)))
+          .where(and(eq(appointments.therapistId, userId), isNull(patients.deletedAt)))
       : db.select({ count: sql<number>`count(*)` }).from(patients).where(isNull(patients.deletedAt)),
     db.select({ count: sql<number>`count(*)` }).from(appointments).where(and(...todayApptConditions)),
     isTherapist
-      ? Promise.resolve([{ count: 0 }]) // Therapists don't see payments
+      ? Promise.resolve([{ count: 0 }])
       : db.select({ count: sql<number>`count(*)` }).from(payments).where(eq(payments.status, "pendiente")),
     db.select({ count: sql<number>`count(*)` })
       .from(appointments)
@@ -69,7 +91,7 @@ export async function getDashboardStats() {
           gte(appointments.dateTime, weekStart),
           lte(appointments.dateTime, weekEnd),
           eq(appointments.status, "completada"),
-          ...(isTherapist ? [eq(appointments.therapistId, session.user.id)] : []),
+          ...(isTherapist ? [eq(appointments.therapistId, userId)] : []),
         ]
       )
     ),
@@ -87,10 +109,13 @@ export async function getDashboardStats() {
 
 export async function getRecentActivity(limit = 10) {
   const session = await requireStaff();
+  return _getRecentActivity(session.user.role, session.user.id, limit);
+}
 
+async function _getRecentActivity(role: string, userId: string, limit: number) {
   const conditions = [];
-  if (session.user.role === "terapeuta") {
-    conditions.push(eq(auditLog.userId, session.user.id));
+  if (role === "terapeuta") {
+    conditions.push(eq(auditLog.userId, userId));
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -114,15 +139,18 @@ export async function getRecentActivity(limit = 10) {
 
 export async function getUpcomingAppointments(limit = 8) {
   const session = await requireStaff();
+  return _getUpcomingAppointments(session.user.role, session.user.id, limit);
+}
 
+async function _getUpcomingAppointments(role: string, userId: string, limit: number) {
   const now = new Date();
   const conditions = [
     gte(appointments.dateTime, now),
     eq(appointments.status, "programada"),
   ];
 
-  if (session.user.role === "terapeuta") {
-    conditions.push(eq(appointments.therapistId, session.user.id));
+  if (role === "terapeuta") {
+    conditions.push(eq(appointments.therapistId, userId));
   }
 
   return db
@@ -147,7 +175,10 @@ export async function getUpcomingAppointments(limit = 8) {
 
 export async function getTodayAppointments() {
   const session = await requireStaff();
+  return _getTodayAppointments(session.user.role, session.user.id);
+}
 
+async function _getTodayAppointments(role: string, userId: string) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
@@ -158,8 +189,8 @@ export async function getTodayAppointments() {
     lte(appointments.dateTime, tomorrow),
   ];
 
-  if (session.user.role === "terapeuta") {
-    conditions.push(eq(appointments.therapistId, session.user.id));
+  if (role === "terapeuta") {
+    conditions.push(eq(appointments.therapistId, userId));
   }
 
   return db

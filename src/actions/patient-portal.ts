@@ -2,8 +2,8 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { appointments, careTeamMembers } from "@/lib/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { appointments, careTeamMembers, payments, patientFiles } from "@/lib/db/schema";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { logAudit } from "@/lib/audit";
 
 // Get appointments for the currently logged-in patient
@@ -84,5 +84,43 @@ export async function getMyProfessionals() {
         },
       },
     },
+  });
+}
+
+// Get payment history for the currently logged-in patient
+export async function getMyPayments() {
+  const session = await auth();
+  if (!session?.user) return [];
+  if (session.user.role !== "paciente" || !session.user.linkedPatientId)
+    return [];
+
+  return db.query.payments.findMany({
+    where: eq(payments.patientId, session.user.linkedPatientId),
+    with: {
+      appointment: {
+        columns: { dateTime: true, sessionType: true },
+        with: {
+          therapist: { columns: { name: true } },
+        },
+      },
+    },
+    orderBy: [desc(payments.date)],
+    limit: 100,
+  });
+}
+
+// Get documents/files uploaded by therapists for this patient
+export async function getMyDocuments() {
+  const session = await auth();
+  if (!session?.user) return [];
+  if (session.user.role !== "paciente" || !session.user.linkedPatientId)
+    return [];
+
+  return db.query.patientFiles.findMany({
+    where: eq(patientFiles.patientId, session.user.linkedPatientId),
+    with: {
+      uploader: { columns: { name: true } },
+    },
+    orderBy: [desc(patientFiles.createdAt)],
   });
 }

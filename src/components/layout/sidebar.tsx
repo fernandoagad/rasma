@@ -3,12 +3,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
   Calendar,
   CalendarDays,
+  CalendarPlus,
+  CalendarClock,
   CreditCard,
   FileText,
   ClipboardList,
@@ -40,6 +42,7 @@ import { logoutAction } from "@/actions/auth";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { GlobalSearch } from "@/components/layout/global-search";
 import { ChatPanel } from "@/components/chat/chat-panel";
+import { AvailabilityDialog } from "@/components/settings/availability-dialog";
 import { usePresence } from "@/hooks/use-presence";
 
 /* ─── Nav data ─── */
@@ -127,11 +130,13 @@ function SidebarNav({
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium transition-all",
                     active
-                      ? "bg-rasma-dark text-rasma-lime shadow-sm"
+                      ? role === "paciente"
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "bg-rasma-dark text-rasma-lime shadow-sm"
                       : "text-rasma-gray-700 hover:bg-rasma-gray-100 hover:text-rasma-dark"
                   )}
                 >
-                  <item.icon className={cn("h-5 w-5 shrink-0", active ? "text-rasma-lime" : "text-rasma-gray-400")} />
+                  <item.icon className={cn("h-5 w-5 shrink-0", active ? (role === "paciente" ? "text-white" : "text-rasma-lime") : "text-rasma-gray-400")} />
                   {item.label}
                 </Link>
               );
@@ -148,18 +153,30 @@ function SidebarNav({
 interface SidebarProps {
   role: string;
   user: {
+    id: string;
     name?: string | null;
     email?: string | null;
     role: string;
   };
+  showAvailabilityPrompt?: boolean;
 }
 
-export function Sidebar({ role, user }: SidebarProps) {
+export function Sidebar({ role, user, showAvailabilityPrompt }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [availabilityOpen, setAvailabilityOpen] = useState(false);
+
+  const isTherapist = role === "terapeuta";
+
+  // Auto-open availability dialog for therapists without a schedule
+  useEffect(() => {
+    if (showAvailabilityPrompt && isTherapist) {
+      setAvailabilityOpen(true);
+    }
+  }, [showAvailabilityPrompt, isTherapist]);
 
   const isStaffRole = !["paciente", "invitado"].includes(role);
   usePresence(isStaffRole);
@@ -207,7 +224,16 @@ export function Sidebar({ role, user }: SidebarProps) {
         <SidebarNav role={role} pathname={pathname} />
 
         {/* Bottom utilities */}
-        <div className="shrink-0 border-t border-border/40 px-3 py-2">
+        <div className="shrink-0 border-t border-border/40 px-3 py-2 space-y-0.5">
+          {isTherapist && (
+            <button
+              onClick={() => setAvailabilityOpen(true)}
+              className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-[14px] font-medium text-rasma-gray-700 hover:bg-rasma-gray-100 transition-colors"
+            >
+              <CalendarClock className="h-5 w-5 text-rasma-gray-400" />
+              Mis Horarios
+            </button>
+          )}
           <button
             onClick={() => setChatOpen(true)}
             className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-[14px] font-medium text-rasma-gray-700 hover:bg-rasma-gray-100 transition-colors"
@@ -329,6 +355,7 @@ export function Sidebar({ role, user }: SidebarProps) {
         <div className="flex items-stretch h-16">
           {getMobileBottomTabs(role).map((tab) => {
             const active = isNavActive(pathname, tab.href);
+            const isPatient = role === "paciente";
             return (
               <Link
                 key={tab.href}
@@ -336,14 +363,14 @@ export function Sidebar({ role, user }: SidebarProps) {
                 className={cn(
                   "flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors relative",
                   active
-                    ? "text-rasma-dark"
+                    ? isPatient ? "text-blue-600" : "text-rasma-dark"
                     : "text-muted-foreground"
                 )}
               >
                 {active && (
-                  <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full bg-rasma-dark" />
+                  <span className={cn("absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full", isPatient ? "bg-blue-600" : "bg-rasma-dark")} />
                 )}
-                <tab.icon className={cn("h-5 w-5", active && "text-rasma-dark")} />
+                <tab.icon className={cn("h-5 w-5", active && (isPatient ? "text-blue-600" : "text-rasma-dark"))} />
                 {tab.label}
               </Link>
             );
@@ -367,6 +394,14 @@ export function Sidebar({ role, user }: SidebarProps) {
       {role !== "invitado" && (
         <ChatPanel open={chatOpen} onOpenChange={setChatOpen} userRole={role} />
       )}
+      {isTherapist && (
+        <AvailabilityDialog
+          therapistId={user.id}
+          open={availabilityOpen}
+          onOpenChange={setAvailabilityOpen}
+          isFirstTime={!!showAvailabilityPrompt}
+        />
+      )}
     </>
   );
 }
@@ -377,6 +412,7 @@ function getMobileBottomTabs(role: string) {
   if (role === "paciente") {
     return [
       { href: "/mis-citas", label: "Citas", icon: Calendar },
+      { href: "/mis-citas/agendar", label: "Agendar", icon: CalendarPlus },
     ];
   }
 

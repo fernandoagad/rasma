@@ -205,6 +205,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, account }) {
       if (user) {
         token.role = user.role;
+        token.realRole = user.role;
         token.id = user.id;
         token.linkedPatientId = user.linkedPatientId;
         token.rememberMe = (user as Record<string, unknown>).rememberMe ?? true;
@@ -216,7 +217,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token.id) {
         const lastCheck = (token.roleCheckedAt as number) || 0;
         const elapsed = Date.now() - lastCheck;
-        if (elapsed > 30_000) {
+        if (elapsed > 60_000) {
           const dbUser = await db.query.users.findFirst({
             where: eq(users.id, token.id as string),
             columns: { role: true, active: true, linkedPatientId: true },
@@ -228,9 +229,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               return token;
             }
             token.role = dbUser.role;
+            token.realRole = dbUser.role;
             token.linkedPatientId = dbUser.linkedPatientId;
           }
           token.roleCheckedAt = Date.now();
+        }
+      }
+
+      // Check impersonation cookie (admin only)
+      if (token.realRole === "admin" || token.role === "admin") {
+        try {
+          const { cookies } = await import("next/headers");
+          const cookieStore = await cookies();
+          const impCookie = cookieStore.get("impersonate")?.value;
+          if (impCookie) {
+            const imp = JSON.parse(impCookie) as { role: string; userId?: string; linkedPatientId?: string | null };
+            token.impersonateRole = imp.role;
+            token.impersonateUserId = imp.userId || null;
+            token.impersonateLinkedPatientId = imp.linkedPatientId || null;
+          } else {
+            token.impersonateRole = null;
+            token.impersonateUserId = null;
+            token.impersonateLinkedPatientId = null;
+          }
+        } catch {
+          // Cookies not available in some contexts (e.g., API routes)
         }
       }
 
@@ -249,16 +272,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     session({ session, token }) {
-      // If token.id was cleared (soft expiry), invalidate the session
       if (!token.id) {
         // @ts-expect-error -- force null user so auth checks redirect to login
         session.user = null;
         return session;
       }
       if (session.user) {
-        session.user.role = token.role as string;
-        session.user.id = token.id as string;
-        session.user.linkedPatientId = (token.linkedPatientId as string) || null;
+        const isImpersonating = !!(token.impersonateRole && token.realRole === "admin");
+        session.user.id = isImpersonating && token.impersonateUserId
+          ? token.impersonateUserId as string
+          : token.id as string;
+        session.user.role = isImpersonating
+          ? token.impersonateRole as string
+          : token.role as string;
+        session.user.linkedPatientId = isImpersonating
+          ? (token.impersonateLinkedPatientId as string) || null
+          : (token.linkedPatientId as string) || null;
+        session.user.isImpersonating = isImpersonating;
+        session.user.realRole = token.realRole as string | undefined;
+        session.user.impersonatingUserId = isImpersonating ? token.impersonateUserId as string : null;
       }
       return session;
     },

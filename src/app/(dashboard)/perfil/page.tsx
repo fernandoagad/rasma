@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { BankAccountForm } from "@/components/settings/bank-account-form";
+import { AvailabilityManager } from "@/components/settings/availability-manager";
 import { getBankAccount } from "@/actions/bank-accounts";
 
 export default async function PerfilPage() {
@@ -47,7 +48,10 @@ export default async function PerfilPage() {
       <ProfileForms userName={session.user.name || ""} />
 
       {isTherapist && (
-        <BankAccountForm userId={session.user.id} bankAccount={bankAccount} />
+        <>
+          <AvailabilityManager therapistId={session.user.id} />
+          <BankAccountForm userId={session.user.id} bankAccount={bankAccount} />
+        </>
       )}
     </div>
   );

@@ -24,12 +24,7 @@ import { UpcomingAppointments } from "@/components/dashboard/upcoming-appointmen
 import { TodaySchedule } from "@/components/dashboard/today-schedule";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { NextAppointment } from "@/components/dashboard/next-appointment";
-import {
-  getDashboardStats,
-  getRecentActivity,
-  getUpcomingAppointments,
-  getTodayAppointments,
-} from "@/actions/dashboard";
+import { getDashboardBundle } from "@/actions/dashboard";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -42,12 +37,9 @@ export default async function DashboardPage() {
 
   const firstName = session.user.name?.split(" ")[0] || "usuario";
 
-  const [stats, activities, upcoming, todayAppts] = await Promise.all([
-    getDashboardStats(),
-    getRecentActivity(8),
-    getUpcomingAppointments(5),
-    getTodayAppointments(),
-  ]);
+  // Single auth check → all 4 data fetches parallelized inside
+  const { stats, activities, upcoming, todayAppts: todayRaw } = await getDashboardBundle(8, 5);
+  const todayAppts = todayRaw;
 
   const todaySerialized = todayAppts.map((a) => ({
     ...a,

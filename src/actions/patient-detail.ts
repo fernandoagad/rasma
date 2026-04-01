@@ -5,9 +5,9 @@ import { db } from "@/lib/db";
 import { appointments, payments, sessionNotes, treatmentPlans, users, patients, careTeamMembers } from "@/lib/db/schema";
 import { eq, and, desc, sql, isNull, gte } from "drizzle-orm";
 
-export async function getPatientSummary(patientId: string) {
+export async function getPatientSummary(patientId: string, _skipAccessCheck = false) {
   const session = await requireStaff();
-  await requirePatientAccess(session, patientId);
+  if (!_skipAccessCheck) await requirePatientAccess(session, patientId);
   const now = new Date();
 
   const [
@@ -114,8 +114,8 @@ export async function getPatientSummary(patientId: string) {
   };
 }
 
-export async function getPatientAppointments(patientId: string) {
-  const s = await requireStaff(); await requirePatientAccess(s, patientId);
+export async function getPatientAppointments(patientId: string, _skipAccessCheck = false) {
+  const s = await requireStaff(); if (!_skipAccessCheck) await requirePatientAccess(s, patientId);
   return db
     .select({
       id: appointments.id,
@@ -136,8 +136,8 @@ export async function getPatientAppointments(patientId: string) {
     .limit(50);
 }
 
-export async function getPatientPayments(patientId: string) {
-  const s = await requireStaff(); await requirePatientAccess(s, patientId);
+export async function getPatientPayments(patientId: string, _skipAccessCheck = false) {
+  const s = await requireStaff(); if (!_skipAccessCheck) await requirePatientAccess(s, patientId);
   return db
     .select({
       id: payments.id,
@@ -152,8 +152,8 @@ export async function getPatientPayments(patientId: string) {
     .limit(20);
 }
 
-export async function getPatientNotes(patientId: string) {
-  const s = await requireStaff(); await requirePatientAccess(s, patientId);
+export async function getPatientNotes(patientId: string, _skipAccessCheck = false) {
+  const s = await requireStaff(); if (!_skipAccessCheck) await requirePatientAccess(s, patientId);
   return db
     .select({
       id: sessionNotes.id,
@@ -173,8 +173,8 @@ export async function getPatientNotes(patientId: string) {
     .limit(50);
 }
 
-export async function getPatientPlans(patientId: string) {
-  const s = await requireStaff(); await requirePatientAccess(s, patientId);
+export async function getPatientPlans(patientId: string, _skipAccessCheck = false) {
+  const s = await requireStaff(); if (!_skipAccessCheck) await requirePatientAccess(s, patientId);
   return db.query.treatmentPlans.findMany({
     where: eq(treatmentPlans.patientId, patientId),
     with: {
@@ -184,4 +184,23 @@ export async function getPatientPlans(patientId: string) {
     orderBy: [desc(treatmentPlans.createdAt)],
     limit: 10,
   });
+}
+
+/**
+ * Fetch ALL patient detail data in a single auth check.
+ * Eliminates 6 redundant auth() + requireStaff() calls.
+ */
+export async function getPatientDetailBundle(patientId: string) {
+  const session = await requireStaff();
+  await requirePatientAccess(session, patientId);
+
+  const [summary, appts, pays, notes, plans] = await Promise.all([
+    getPatientSummary(patientId, true),
+    getPatientAppointments(patientId, true),
+    getPatientPayments(patientId, true),
+    getPatientNotes(patientId, true),
+    getPatientPlans(patientId, true),
+  ]);
+
+  return { summary, appointments: appts, payments: pays, notes, plans };
 }

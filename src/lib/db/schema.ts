@@ -273,6 +273,9 @@ export const appointments = sqliteTable(
     index("appt_datetime_idx").on(table.dateTime),
     index("appt_status_idx").on(table.status),
     index("appt_recurring_idx").on(table.recurringGroupId),
+    index("appt_datetime_status_idx").on(table.dateTime, table.status),
+    index("appt_patient_datetime_idx").on(table.patientId, table.dateTime),
+    index("appt_therapist_patient_idx").on(table.therapistId, table.patientId),
   ]
 );
 
@@ -956,8 +959,76 @@ export const careTeamMembers = sqliteTable(
   (table) => [
     index("ctm_patient_idx").on(table.patientId),
     index("ctm_user_idx").on(table.userId),
+    index("ctm_patient_user_idx").on(table.patientId, table.userId),
   ]
 );
+
+// ============================================================
+// THERAPIST AVAILABILITY (weekly schedule)
+// ============================================================
+
+export const therapistAvailability = sqliteTable(
+  "therapist_availability",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    therapistId: text("therapist_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    dayOfWeek: integer("day_of_week").notNull(), // 0=Sunday, 1=Monday ... 6=Saturday
+    startTime: text("start_time").notNull(), // "09:00"
+    endTime: text("end_time").notNull(), // "18:00"
+    slotDurationMinutes: integer("slot_duration_minutes").notNull().default(50),
+    modality: text("modality", { enum: ["presencial", "online", "ambos"] })
+      .notNull()
+      .default("ambos"),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
+  },
+  (table) => [
+    index("avail_therapist_idx").on(table.therapistId),
+    index("avail_therapist_day_idx").on(table.therapistId, table.dayOfWeek),
+  ]
+);
+
+export const therapistAvailabilityRelations = relations(therapistAvailability, ({ one }) => ({
+  therapist: one(users, {
+    fields: [therapistAvailability.therapistId],
+    references: [users.id],
+  }),
+}));
+
+// ============================================================
+// THERAPIST SCHEDULE EXCEPTIONS (days off, vacations)
+// ============================================================
+
+export const therapistExceptions = sqliteTable(
+  "therapist_exceptions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    therapistId: text("therapist_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    date: text("date").notNull(), // "YYYY-MM-DD"
+    reason: text("reason"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    index("exc_therapist_idx").on(table.therapistId),
+    index("exc_date_idx").on(table.therapistId, table.date),
+  ]
+);
+
+export const therapistExceptionsRelations = relations(therapistExceptions, ({ one }) => ({
+  therapist: one(users, {
+    fields: [therapistExceptions.therapistId],
+    references: [users.id],
+  }),
+}));
 
 // ============================================================
 // CARE TEAM MESSAGES (per-patient team chat)

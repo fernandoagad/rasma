@@ -1,27 +1,26 @@
-import { auth } from "@/lib/auth";
+import { requireStaff, requirePatientAccess } from "@/lib/authorization";
 import { getPatientById } from "@/actions/patients";
-import { getPatientAppointments, getPatientPayments, getPatientNotes, getPatientPlans, getPatientSummary } from "@/actions/patient-detail";
+import { getPatientDetailBundle } from "@/actions/patient-detail";
 import { getPatientFiles } from "@/actions/patient-files";
 import { PatientDetail } from "@/components/patients/patient-detail";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 export default async function PatientDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-
+  const session = await requireStaff();
   const { id } = await params;
-  const [patient, patientAppointments, patientPayments, patientNotes, patientPlans, summary, patientFilesList] = await Promise.all([
-    getPatientById(id),
-    getPatientAppointments(id),
-    getPatientPayments(id),
-    getPatientNotes(id),
-    getPatientPlans(id),
-    getPatientSummary(id),
-    getPatientFiles(id),
+
+  // Single auth check — all downstream calls skip redundant checks
+  await requirePatientAccess(session, id);
+
+  // 3 parallel calls instead of 7 (bundle consolidates 5 into 1)
+  const [patient, bundle, files] = await Promise.all([
+    getPatientById(id, true),
+    getPatientDetailBundle(id),
+    getPatientFiles(id, true),
   ]);
 
   if (!patient) notFound();
@@ -31,12 +30,12 @@ export default async function PatientDetailPage({
       patient={patient}
       userRole={session.user.role}
       userId={session.user.id}
-      appointments={patientAppointments}
-      payments={patientPayments}
-      notes={patientNotes}
-      plans={patientPlans}
-      summary={summary}
-      files={patientFilesList}
+      appointments={bundle.appointments}
+      payments={bundle.payments}
+      notes={bundle.notes}
+      plans={bundle.plans}
+      summary={bundle.summary}
+      files={files}
     />
   );
 }
