@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Search, ArrowRight, UserPlus, Loader2 } from "lucide-react";
-import Link from "next/link";
 import { PatientForm } from "./patient-form";
 import { createPatient } from "@/actions/patients";
+import { ensurePatientAccess } from "@/actions/care-teams";
 
 interface ExistingPatient {
   id: string;
@@ -27,12 +29,29 @@ interface Props {
 }
 
 export function PatientSearchOrCreate({ therapists, searchPatients }: Props) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ExistingPatient[]>([]);
   const [searched, setSearched] = useState(false);
   const [searching, setSearching] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [openingId, setOpeningId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const openPatient = async (patient: ExistingPatient) => {
+    if (openingId) return;
+    setOpeningId(patient.id);
+    try {
+      const result = await ensurePatientAccess(patient.id);
+      if (result.joined) {
+        toast.success(`Te agregamos al equipo de ${patient.firstName} ${patient.lastName}`);
+      }
+      router.push(`/pacientes/${patient.id}`);
+    } catch {
+      toast.error("No se pudo abrir el paciente. Intente nuevamente.");
+      setOpeningId(null);
+    }
+  };
 
   const doSearch = useCallback(async (q: string) => {
     if (q.trim().length < 2) {
@@ -107,32 +126,45 @@ export function PatientSearchOrCreate({ therapists, searchPatients }: Props) {
                 Se encontraron <span className="font-medium text-foreground">{results.length}</span> pacientes:
               </p>
               <div className="space-y-2">
-                {results.map((patient) => (
-                  <Link key={patient.id} href={`/pacientes/${patient.id}`}>
-                    <Card className="py-0 gap-0 hover:shadow-md transition-shadow cursor-pointer">
-                      <CardContent className="p-0">
-                        <div className="flex items-center gap-3 px-4 py-3">
-                          <AvatarInitials name={`${patient.firstName} ${patient.lastName}`} size="sm" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold">
-                              {patient.firstName} {patient.lastName}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground">
-                              {patient.rut && `RUT: ${patient.rut}`}
-                              {patient.rut && patient.email && " · "}
-                              {patient.email}
-                              {patient.primaryTherapist && ` · ${patient.primaryTherapist.name}`}
-                            </p>
+                {results.map((patient) => {
+                  const isOpening = openingId === patient.id;
+                  return (
+                    <button
+                      key={patient.id}
+                      type="button"
+                      onClick={() => openPatient(patient)}
+                      disabled={!!openingId}
+                      className="w-full text-left disabled:opacity-60 disabled:cursor-wait"
+                    >
+                      <Card className="py-0 gap-0 hover:shadow-md transition-shadow cursor-pointer">
+                        <CardContent className="p-0">
+                          <div className="flex items-center gap-3 px-4 py-3">
+                            <AvatarInitials name={`${patient.firstName} ${patient.lastName}`} size="sm" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold">
+                                {patient.firstName} {patient.lastName}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {patient.rut && `RUT: ${patient.rut}`}
+                                {patient.rut && patient.email && " · "}
+                                {patient.email}
+                                {patient.primaryTherapist && ` · ${patient.primaryTherapist.name}`}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <StatusBadge type="patient" status={patient.status} />
+                              {isOpening ? (
+                                <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+                              ) : (
+                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <StatusBadge type="patient" status={patient.status} />
-                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
+                        </CardContent>
+                      </Card>
+                    </button>
+                  );
+                })}
               </div>
             </>
           ) : (

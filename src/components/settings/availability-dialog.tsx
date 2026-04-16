@@ -185,7 +185,22 @@ function TimePicker({
   function handleOpen() {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, left: rect.left });
+      // A transformed ancestor (Radix Dialog uses translate) becomes the containing
+      // block for position:fixed descendants — compensate so viewport coords land right.
+      let offsetLeft = 0;
+      let offsetTop = 0;
+      let ancestor: HTMLElement | null = triggerRef.current.parentElement;
+      while (ancestor) {
+        const t = window.getComputedStyle(ancestor).transform;
+        if (t && t !== "none") {
+          const r = ancestor.getBoundingClientRect();
+          offsetLeft = r.left;
+          offsetTop = r.top;
+          break;
+        }
+        ancestor = ancestor.parentElement;
+      }
+      setPos({ top: rect.bottom + 4 - offsetTop, left: rect.left - offsetLeft });
     }
     setOpen(true);
   }

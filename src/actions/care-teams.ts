@@ -108,6 +108,44 @@ export async function joinCareTeam(patientId: string) {
   return addCareTeamMember(patientId, session.user.id);
 }
 
+// Ensure the current user has access to a patient before navigating to their detail page.
+// Non-therapist staff already have full access — no-op. Therapists who are not the primary
+// nor on the care team get auto-added as members so the detail page won't throw.
+export async function ensurePatientAccess(patientId: string) {
+  const session = await requireStaff();
+  if (session.user.role !== "terapeuta") return { success: true as const };
+
+  const [isPrimary, isMember] = await Promise.all([
+    db.query.patients.findFirst({
+      where: and(eq(patients.id, patientId), eq(patients.primaryTherapistId, session.user.id)),
+      columns: { id: true },
+    }),
+    db.query.careTeamMembers.findFirst({
+      where: and(eq(careTeamMembers.patientId, patientId), eq(careTeamMembers.userId, session.user.id)),
+      columns: { id: true },
+    }),
+  ]);
+
+  if (isPrimary || isMember) return { success: true as const };
+
+  await db.insert(careTeamMembers).values({
+    patientId,
+    userId: session.user.id,
+    role: "member",
+  });
+
+  await logAudit({
+    userId: session.user.id,
+    action: "add_care_team_member",
+    entityType: "care_team",
+    entityId: patientId,
+    details: { addedUserId: session.user.id, role: "member", auto: true },
+  });
+
+  revalidatePath(`/pacientes/${patientId}`);
+  return { success: true as const, joined: true as const };
+}
+
 // Remove a member from a patient's care team
 export async function removeCareTeamMember(patientId: string, userId: string) {
   const session = await requireStaff();
